@@ -10,25 +10,11 @@ def add_batch_dimension(image):
     new_shape = [1] + list(image.shape)
     return image.reshape(new_shape)
 
-
-def load_data():
-    images_path = 'ProcessedData/BrainArray.images.pickle'
-    with file_io.FileIO(images_path, 'rb') as f:
-        images = pickle.load(f)
-    ground_truth_path = 'ProcessedData/BrainArray.ground_truth.pickle'
-    with file_io.FileIO(ground_truth_path, 'rb') as f:
-        ground_truth = pickle.load(f)
-    return images, ground_truth
-
-
 output_path = 'logs'
 
-images, ground_truths = load_data()
-n_channels = images[0].shape[-1]
 
-graph = tf.Graph()
-
-with graph.as_default():
+def model_fn():
+    n_channels = images[0].shape[-1]
     # Input data
     tf_input_data = tf.placeholder(tf.float32, shape=(1, None, None, None, n_channels), name='tf_input_data')
     tf_ground_truth = tf.placeholder(tf.float32, shape=(1, None, None, None,), name='tf_ground_truth')
@@ -59,7 +45,6 @@ with graph.as_default():
             # calculate reduce mean sigmoid cross entropy (even though all images are different size there's no problem)
             return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=l, labels=t), name='loss')
 
-
     loss = caculate_loss(logits, tf_ground_truth)
     # Optimizer.
     with tf.variable_scope('optimizer'):
@@ -76,38 +61,38 @@ with graph.as_default():
     tf.summary.scalar('metrics/learning_rate', learning_rate)
     #tf.summary.scalar('metrics/accuracy', accuracy)
 
-    tf_summary = tf.summary.merge_all()
-    #saver = tf.train.Saver()
+    #tf_summary = tf.summary.merge_all()
 
 
-train_writer = tf.summary.FileWriter(output_path + '/train', graph)
 
-max_steps = 11
-with tf.Session(graph=graph) as session:
-    tf.global_variables_initializer().run()
-    print('Initialized')
-    for step in range(max_steps):
 
-        # since all images have different sizes, we must train with batch size 1
-        pos = step % (len(ground_truths) - 1)
-        pos=0
-        image = images[pos]
-        ground_truth = ground_truths[pos]
-        # reshape to have batch dimension and channel dimensions (fo size 1 each)
-        image = add_batch_dimension(image)
-        ground_truth = add_batch_dimension(ground_truth)
 
-        # train step
-        feed_dict = {'tf_input_data:0': image, 'tf_ground_truth:0': ground_truth}
-        _, l, summary, prediction = session.run([train_step, loss, tf_summary, tf_prediction], feed_dict=feed_dict)
-        train_writer.add_summary(summary)
-
-        if step % 1 == 0:
-            print('Minibatch loss at step %d: %f' % (step, l))
-            prediction = prediction.squeeze()
-            ground_truth = ground_truth.squeeze()
-            print('The Dice Coefficient is: {0}'.format(dice_coefficient(prediction, ground_truth)))
-            print('The Hausdorff Distance is: {0}'.format(hausdorff_distance(prediction, ground_truth)))
-            print('The Average Symmetric Surface Distance is: {0}'.format(average_symmetric_surface_distance(prediction, ground_truth)))
-            print('------------------------------------------------------')
-    train_writer.flush()
+# max_steps = 11
+# with tf.Session(graph=graph) as session:
+#     tf.global_variables_initializer().run()
+#     print('Initialized')
+#     for step in range(max_steps):
+#
+#         # since all images have different sizes, we must train with batch size 1
+#         pos = step % (len(ground_truths) - 1)
+#         pos=0
+#         image = images[pos]
+#         ground_truth = ground_truths[pos]
+#         # reshape to have batch dimension and channel dimensions (fo size 1 each)
+#         image = add_batch_dimension(image)
+#         ground_truth = add_batch_dimension(ground_truth)
+#
+#         # train step
+#         feed_dict = {'tf_input_data:0': image, 'tf_ground_truth:0': ground_truth}
+#         _, l, summary, prediction = session.run([train_step, loss, tf_summary, tf_prediction], feed_dict=feed_dict)
+#         train_writer.add_summary(summary)
+#
+#         if step % 1 == 0:
+#             print('Minibatch loss at step %d: %f' % (step, l))
+#             prediction = prediction.squeeze()
+#             ground_truth = ground_truth.squeeze()
+#             print('The Dice Coefficient is: {0}'.format(dice_coefficient(prediction, ground_truth)))
+#             print('The Hausdorff Distance is: {0}'.format(hausdorff_distance(prediction, ground_truth)))
+#             print('The Average Symmetric Surface Distance is: {0}'.format(average_symmetric_surface_distance(prediction, ground_truth)))
+#             print('------------------------------------------------------')
+#     train_writer.flush()

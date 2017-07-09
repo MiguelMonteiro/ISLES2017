@@ -1,0 +1,18 @@
+#!/bin/bash
+
+JOB_NAME=svhn_20
+
+OUTPUT_PATH=SingleDigitClassification/logs
+DATA_PATH=SingleDigitClassification/data/SVHN.pickle
+
+gcloud ml-engine local train \
+    --module-name SingleDigitClassification.task \
+    --package-path SingleDigitClassification/ \
+    --distributed \
+    -- \
+    --file-path $DATA_PATH \
+    --train-steps 10000 \
+    --job-dir $OUTPUT_PATH
+
+
+python -m tensorflow.tensorboard --logdir=logs

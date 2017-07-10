@@ -1,4 +1,5 @@
 import tensorflow as tf
+import multiprocessing
 
 TRAIN, EVAL, PREDICT = 'TRAIN', 'EVAL', 'PREDICT'
 CSV, EXAMPLE, JSON = 'CSV', 'EXAMPLE', 'JSON'
@@ -70,11 +71,14 @@ def caculate_loss(logits, ground_truth):
         return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=l, labels=t), name='loss')
 
 
-def model_fn(n_channels):
+def model_fn(tf_input_data, tf_ground_truth, n_channels):
     #n_channels = images[0].shape[-1]
     # Input data (must expand_dims because batch_size is always 1)
-    tf_input_data = tf.expand_dims(tf.placeholder(tf.float32, shape=(None, None, None, n_channels), name='tf_input_data'), 0)
-    tf_ground_truth = tf.expand_dims(tf.placeholder(tf.float32, shape=(None, None, None,), name='tf_ground_truth'), 0)
+    #tf_input_data = tf.expand_dims(tf.placeholder(tf.float32, shape=(None, None, None, n_channels), name='tf_input_data'), 0)
+    #tf_ground_truth = tf.expand_dims(tf.placeholder(tf.float32, shape=(None, None, None,), name='tf_ground_truth'), 0)
+
+    tf_input_data = tf.expand_dims(tf_input_data, 0)
+    tf_ground_truth = tf.expand_dims(tf_ground_truth, 0)
 
     # architecture
     l1 = ConvolutionLayer3D(1, [5, 5, 5, n_channels, 64], [1, 1, 1, 1, 1])
@@ -93,8 +97,7 @@ def model_fn(n_channels):
     logits = model(tf_input_data)
 
     loss = caculate_loss(logits, tf_ground_truth)
-    #global_step = tf.train.get_or_create_global_step()
-    global_step = tf.contrib.framework.get_or_create_global_step()
+    global_step = tf.train.get_or_create_global_step()
     # Optimizer.
     with tf.variable_scope('optimizer'):
         learning_rate = tf.train.exponential_decay(0.05, global_step, 10000, 0.95)
@@ -112,33 +115,32 @@ def model_fn(n_channels):
     return train_op, global_step
 
 
+def parse_example(serialized_example):
+    features = tf.parse_single_example(
+        serialized_example,
+        # Defaults are not specified since both keys are required.
+        features={
+            'shape': tf.FixedLenFeature([], tf.string),
+            'img_raw': tf.FixedLenFeature([], tf.string),
+            'gt_raw': tf.FixedLenFeature([], tf.string)
+        })
+    shape = tf.decode_raw(features['shape'], tf.int32)
+    image = tf.decode_raw(features['img_raw'], tf.float64)
+    ground_truth = tf.decode_raw(features['gt_raw'], tf.uint8)
 
-# max_steps = 11
-# with tf.Session(graph=graph) as session:
-#     tf.global_variables_initializer().run()
-#     print('Initialized')
-#     for step in range(max_steps):
-#
-#         # since all images have different sizes, we must train with batch size 1
-#         pos = step % (len(ground_truths) - 1)
-#         pos=0
-#         image = images[pos]
-#         ground_truth = ground_truths[pos]
-#         # reshape to have batch dimension and channel dimensions (fo size 1 each)
-#         image = add_batch_dimension(image)
-#         ground_truth = add_batch_dimension(ground_truth)
-#
-#         # train step
-#         feed_dict = {'tf_input_data:0': image, 'tf_ground_truth:0': ground_truth}
-#         _, l, summary, prediction = session.run([train_step, loss, tf_summary, tf_prediction], feed_dict=feed_dict)
-#         train_writer.add_summary(summary)
-#
-#         if step % 1 == 0:
-#             print('Minibatch loss at step %d: %f' % (step, l))
-#             prediction = prediction.squeeze()
-#             ground_truth = ground_truth.squeeze()
-#             print('The Dice Coefficient is: {0}'.format(dice_coefficient(prediction, ground_truth)))
-#             print('The Hausdorff Distance is: {0}'.format(hausdorff_distance(prediction, ground_truth)))
-#             print('The Average Symmetric Surface Distance is: {0}'.format(average_symmetric_surface_distance(prediction, ground_truth)))
-#             print('------------------------------------------------------')
-#     train_writer.flush()
+    # reshape
+    image = tf.reshape(image, shape)
+    ground_truth = tf.reshape(ground_truth, shape[:-1])
+    return tf.cast(image, tf.float32), tf.cast(ground_truth, tf.float32)
+
+
+def input_fn(filenames, num_epochs=None, shuffle=True):
+
+    filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle)
+    reader = tf.TFRecordReader()
+    _, example = reader.read(filename_queue)
+
+    # Parse the CSV File
+    image, ground_truth = parse_example(example)
+
+    return image, ground_truth

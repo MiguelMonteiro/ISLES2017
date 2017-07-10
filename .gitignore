@@ -108,6 +108,7 @@ ENV/
 test/*
 Training/*
 *.zip
+*.tfrecord
 logs/*
 *.gz
 *.mat

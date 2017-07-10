@@ -9,21 +9,18 @@ import model
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def load_data(file_path):
-    with file_io.FileIO(file_path, 'r') as f:
-        data = pickle.load(f)
-    return data['images'], data['ground_truth']
-
-
-def run(target, is_chief, train_steps, job_dir, file_path):
-    images, ground_truth = load_data(file_path[0])
-    num_channels = images[0].shape[-1]
+def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
+    num_channels = 4
     hooks = []
     # Create a new graph and specify that as default
     with tf.Graph().as_default():
         with tf.device(tf.train.replica_device_setter()):
+
+            # Features and label tensors as read using filename queue
+            features, labels = model.input_fn(file_path, num_epochs)
+
             # Returns the training graph and global step tensor
-            train_op, global_step_tensor = model.model_fn(num_channels)
+            train_op, global_step = model.model_fn(features, labels, num_channels)
 
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles
@@ -37,20 +34,13 @@ def run(target, is_chief, train_steps, job_dir, file_path):
                                                save_summaries_steps=1) as session:
             # Global step to keep track of global number of steps particularly in
             # distributed setting
-            # step = global_step_tensor.eval(session=session)
-
-            # give some random tensors because of feed_dict
-            feed_dict = {'tf_input_data:0': images[0], 'tf_ground_truth:0': ground_truth[0]}
-            step = session.run(global_step_tensor, feed_dict=feed_dict)
+            step = global_step.eval(session=session)
 
             # Run the training graph which returns the step number as tracked by
             # the global step tensor.
             # When train epochs is reached, session.should_stop() will be true. does nothing without queues
             while (train_steps is None or step < train_steps) and not session.should_stop():
-                pos = step % (len(images) - 1)
-                feed_dict = {'tf_input_data:0': images[pos], 'tf_ground_truth:0': ground_truth[pos]}
-                step, _ = session.run([global_step_tensor, train_op], feed_dict=feed_dict)
-
+                step, _ = session.run([global_step, train_op])
                 if step % 1 == 0:
                     tf.logging.info('Step: {0}'.format(step))
 
@@ -112,6 +102,9 @@ if __name__ == "__main__":
     parser.add_argument('--train-steps',
                         type=int,
                         help='Maximum number of training steps to perform.')
+    parser.add_argument('--num-epochs',
+                        type=int,
+                        help='Maximum number of epochs on which to train')
     parser.add_argument('--verbosity',
                         choices=[
                             'DEBUG',

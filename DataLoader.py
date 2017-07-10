@@ -4,6 +4,63 @@ import nibabel as nib
 import os
 
 
+
+
+import tensorflow as tf
+
+
+def _bytes_feature(value):
+    return tf.train.Feature(bytes_list=tf.train.BytesList(value=[value]))
+
+
+def _int64_feature(value):
+    return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
+
+
+def to_tf_record(image_list, ground_truth_list, tf_record_file_path):
+
+    writer = tf.python_io.TFRecordWriter(tf_record_file_path)
+
+    for image, ground_truth in zip(image_list, ground_truth_list):
+
+        shape = np.array(image.shape).astype(np.int32)
+
+        # must set precision if using floats
+        np.set_printoptions(precision=64)
+
+        example = tf.train.Example(features=tf.train.Features(feature={
+            'shape': _bytes_feature(shape.tostring()),
+            'img_raw': _bytes_feature(image.tostring()),
+            'gt_raw': _bytes_feature(ground_truth.tostring())}))
+
+        writer.write(example.SerializeToString())
+
+    writer.close()
+    print('Final file size:', os.stat(filename).st_size / 1e6, ' MB')
+
+
+def check_if_reconstructed_images_match_originals(image_list, ground_truth_list, tf_record_file_path):
+
+    record_iterator = tf.python_io.tf_record_iterator(path=tf_record_file_path)
+
+    for string_record, original_image, original_ground_truth in zip(record_iterator, image_list, ground_truth_list):
+        example = tf.train.Example()
+        example.ParseFromString(string_record)
+
+        shape = np.fromstring(example.features.feature['shape'].bytes_list.value[0], dtype=np.int32)
+        image = np.fromstring(example.features.feature['img_raw'].bytes_list.value[0], dtype=np.float64)
+        ground_truth = np.fromstring(example.features.feature['gt_raw'].bytes_list.value[0], dtype=np.uint8)
+
+        # reshape
+        img_shape = shape.tolist()
+        image = image.reshape(img_shape)
+        gt_shape = img_shape[:-1]
+        ground_truth = ground_truth.reshape(gt_shape)
+
+        assert np.allclose(image, original_image)
+        assert np.allclose(ground_truth, original_ground_truth)
+
+
 def get_byte_size_of_memmap(array):
     return np.prod(array.shape) * np.dtype(array.dtype).itemsize
 
@@ -33,7 +90,7 @@ def build_multimodal_image(image_list):
     shape = image_list[0].shape
     for image in image_list:
         assert image.shape == shape
-    return np.stack(image_list).transpose((1, 2, 3, 0))
+    return np.stack(image_list).transpose((1, 2, 3, 0)).astype(np.float64)
 
 
 # 4DPWI and ADC are raw data, the others are derived maps, OT is the expert segmentation
@@ -41,8 +98,8 @@ def build_multimodal_image(image_list):
 image_types = ['.MR_4DPWI', '.MR_ADC', '.MR_MTT', '.MR_rCBF', '.MR_rCBV', '.MR_Tmax', '.MR_TTP', '.OT']
 modes_to_use = ['.MR_ADC', '.MR_MTT', '.MR_rCBF', '.MR_rCBV']
 
-data = {key: [] for key in ['images', 'ground_truth']}
-
+image_list = []
+ground_truth_list = []
 
 for folder in get_sub_folders('Training'):
     print(folder)
@@ -62,27 +119,20 @@ for folder in get_sub_folders('Training'):
         image = im.get_data()
 
         if image_type == '.OT':
-            data['ground_truth'].append(image)
+            ground_truth_list.append(image.astype(np.uint8))
         if image_type in modes_to_use:
             buffer.append(contrast_normalization(image))
 
-    data['images'].append(build_multimodal_image(buffer))
+    image_list.append(build_multimodal_image(buffer))
 
+filename = os.path.join('isles2017' + '.tfrecord')
 
+to_tf_record(image_list, ground_truth_list, filename)
+check_if_reconstructed_images_match_originals(image_list, ground_truth_list, filename)
 
-# # get sizes of data if they were to be save to file
-#
-# for key in data:
-#     size = 0
-#     for el in data[key]:
-#         size += get_byte_size_of_memmap(el)
-#     print('File size of type {0} would be {1:.1f} MB.'.format(key, size/1e6))
-
-
-filename = os.path.join('ProcessedData', 'isles2017' + '.pickle')
-with open(filename, 'wb') as f:
-    print('Pickling file: {0}'.format(filename))
-    pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-    statinfo = os.stat(filename)
-    print('Compressed pickle size:', statinfo.st_size / 1e6, ' MB')
+# with open(filename, 'wb') as f:
+#     print('Pickling file: {0}'.format(filename))
+#     pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+#     statinfo = os.stat(filename)
+#     print('Compressed pickle size:', statinfo.st_size / 1e6, ' MB')
 

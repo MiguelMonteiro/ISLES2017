@@ -1,5 +1,5 @@
 import numpy as np
-import pickle
+from six.moves import cPickle as pickle
 import nibabel as nib
 import os
 
@@ -70,20 +70,19 @@ for folder in get_sub_folders('Training'):
 
 
 
-# get sizes of data if they were to be save to file
+# # get sizes of data if they were to be save to file
+#
+# for key in data:
+#     size = 0
+#     for el in data[key]:
+#         size += get_byte_size_of_memmap(el)
+#     print('File size of type {0} would be {1:.1f} MB.'.format(key, size/1e6))
 
-for key in data:
-    size = 0
-    for el in data[key]:
-        size += get_byte_size_of_memmap(el)
-    print('File size of type {0} would be {1:.1f} MB.'.format(key, size/1e6))
 
-
-for key in data:
-    filename = os.path.join('ProcessedData', 'BrainArray.' + key + '.pickle')
-    with open(filename, 'wb') as f:
-        print('Pickling file: {0}'.format(filename))
-        pickle.dump(data[key], f)
-        statinfo = os.stat(filename)
-        print('Compressed pickle size:', statinfo.st_size / 1e6, ' MB')
+filename = os.path.join('ProcessedData', 'isles2017' + '.pickle')
+with open(filename, 'wb') as f:
+    print('Pickling file: {0}'.format(filename))
+    pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
+    statinfo = os.stat(filename)
+    print('Compressed pickle size:', statinfo.st_size / 1e6, ' MB')
 

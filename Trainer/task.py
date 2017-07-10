@@ -1,30 +1,22 @@
 import argparse
 import json
 import os
-import threading
 import tensorflow as tf
-import model
-from tensorflow.python.saved_model import signature_constants as sig_constants
-from tensorflow.python.lib.io import file_io
 from six.moves import cPickle as pickle
-import numpy as np
-
+from tensorflow.python.lib.io import file_io
+import model
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def load_data():
-    images_path = 'ProcessedData/BrainArray.images.pickle'
-    with file_io.FileIO(images_path, 'rb') as f:
-        images = pickle.load(f)
-    ground_truth_path = 'ProcessedData/BrainArray.ground_truth.pickle'
-    with file_io.FileIO(ground_truth_path, 'rb') as f:
-        ground_truth = pickle.load(f)
-    return images, ground_truth
+def load_data(file_path):
+    with file_io.FileIO(file_path, 'r') as f:
+        data = pickle.load(f)
+    return data['images'], data['ground_truth']
 
 
-def run(target, is_chief, train_steps, job_dir):
-    images, ground_truth = load_data()
+def run(target, is_chief, train_steps, job_dir, file_path):
+    images, ground_truth = load_data(file_path[0])
     num_channels = images[0].shape[-1]
     hooks = []
     # Create a new graph and specify that as default
@@ -120,19 +112,6 @@ if __name__ == "__main__":
     parser.add_argument('--train-steps',
                         type=int,
                         help='Maximum number of training steps to perform.')
-    parser.add_argument('--eval-frequency',
-                        default=1,
-                        help='Perform one evaluation per n checkpoints (not training steps))')
-    parser.add_argument('--num-epochs',
-                        type=int,
-                        help='Maximum number of epochs on which to train')
-    parser.add_argument('--export-format',
-                        type=str,
-                        choices=[model.JSON, model.CSV, model.EXAMPLE],
-                        default=model.JSON,
-                        help="""\
-                      Desired input format for the exported saved_model
-                      binary.""")
     parser.add_argument('--verbosity',
                         choices=[
                             'DEBUG',

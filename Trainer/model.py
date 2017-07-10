@@ -1,20 +1,47 @@
-import numpy as np
 import tensorflow as tf
-from six.moves import cPickle as pickle
-from tensorflow.python.lib.io import file_io
-from CNN import ConvolutionLayer3D, DeconvolutionLayer3D
-
 
 TRAIN, EVAL, PREDICT = 'TRAIN', 'EVAL', 'PREDICT'
 CSV, EXAMPLE, JSON = 'CSV', 'EXAMPLE', 'JSON'
 PREDICTION_MODES = [CSV, EXAMPLE, JSON]
 
 
-def add_batch_dimension(image):
-    new_shape = [1] + list(image.shape)
-    return image.reshape(new_shape)
+class ConvolutionLayer3D(object):
+    def __init__(self, layer_num, filter, strides, padding='VALID'):
+        assert len(filter) == 5  # [filter_depth, filter_height, filter_width, in_channels, out_channels]
+        assert len(strides) == 5  # must match input dimensions [batch, in_depth, in_height, in_width, in_channels]
+        assert padding in ['VALID', 'SAME']
+        self.layer_name = 'Conv3D_' + str(layer_num)
+        self.filter = filter
+        self.strides = strides
+        self.padding = padding
+        with tf.variable_scope(self.layer_name):
+            self.w = tf.Variable(initial_value=tf.truncated_normal(shape=filter), name='weights')
+            self.b = tf.Variable(tf.constant(1.0, shape=[filter[-1]]), name='biases')
 
-output_path = 'logs'
+    def operate(self, input):
+        with tf.variable_scope(self.layer_name + '/'):
+            convolution = tf.nn.conv3d(input, self.w, self.strides, self.padding, name=None)
+            return tf.nn.relu(convolution + self.b)
+
+
+class DeconvolutionLayer3D(object):
+    def __init__(self, layer_num, filter, output_shape, strides, padding='VALID'):
+        assert len(filter) == 5  # [depth, height, width, output_channels, in_channels]
+        assert len(strides) == 5  # must match input dimensions [batch, depth, height, width, in_channels]
+        assert padding in ['VALID', 'SAME']
+        self.layer_name = 'Deconv3D_' + str(layer_num)
+        self.filter = filter
+        self.output_shape = output_shape
+        self.strides = strides
+        self.padding = padding
+        with tf.variable_scope(self.layer_name):
+            self.w = tf.Variable(initial_value=tf.truncated_normal(shape=filter), name='weights')
+            self.b = tf.Variable(tf.constant(1.0, shape=[filter[-2]]), name='biases')
+
+    def operate(self, input):
+        with tf.variable_scope(self.layer_name + '/'):
+            deconvolution = tf.nn.conv3d_transpose(input, self.w, self.output_shape, self.strides, self.padding, name=None)
+            return deconvolution + self.b
 
 
 def dice_coefficient(input1, input2):
@@ -66,7 +93,8 @@ def model_fn(n_channels):
     logits = model(tf_input_data)
 
     loss = caculate_loss(logits, tf_ground_truth)
-    global_step = tf.train.get_or_create_global_step()
+    #global_step = tf.train.get_or_create_global_step()
+    global_step = tf.contrib.framework.get_or_create_global_step()
     # Optimizer.
     with tf.variable_scope('optimizer'):
         learning_rate = tf.train.exponential_decay(0.05, global_step, 10000, 0.95)

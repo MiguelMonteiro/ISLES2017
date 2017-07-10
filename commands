@@ -2,17 +2,36 @@
 
 JOB_NAME=svhn_20
 
-OUTPUT_PATH=SingleDigitClassification/logs
-DATA_PATH=SingleDigitClassification/data/SVHN.pickle
+OUTPUT_PATH=logs
+DATA_PATH=ProcessedData/isles2017.pickle
 
 gcloud ml-engine local train \
-    --module-name SingleDigitClassification.task \
-    --package-path SingleDigitClassification/ \
+    --module-name Trainer.task \
+    --package-path Trainer/ \
     --distributed \
     -- \
     --file-path $DATA_PATH \
-    --train-steps 10000 \
+    --train-steps 10 \
     --job-dir $OUTPUT_PATH
 
 
-python -m tensorflow.tensorboard --logdir=logs
+
+JOB_NAME=isles_4
+BUCKET_NAME=mindful-experience-4425
+OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
+DATA_PATH=gs://$BUCKET_NAME/data/isles2017.pickle
+
+
+gcloud ml-engine jobs submit training $JOB_NAME \
+    --job-dir $OUTPUT_PATH \
+    --runtime-version 1.0 \
+    --module-name Trainer.task \
+    --package-path Trainer/ \
+    --scale-tier STANDARD_1 \
+    -- \
+    --file-path $DATA_PATH \
+    --train-steps 50
+
+python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH
+
+gsutil cp isles2017.pickle gs://mindful-experience-4425/data

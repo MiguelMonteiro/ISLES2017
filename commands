@@ -16,7 +16,7 @@ gcloud ml-engine local train \
 
 
 
-JOB_NAME=isles_10
+JOB_NAME=isles_running_with_complex_model_m_machines
 BUCKET_NAME=mindful-experience-4425
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles2017.tfrecord
@@ -27,7 +27,8 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --runtime-version 1.2 \
     --module-name trainer.task \
     --package-path trainer/ \
-    --scale-tier PREMIUM_1 \
+    --scale-tier CUSTOM \
+    --config config.yaml \
     -- \
     --file-path $DATA_PATH \
     --train-steps 50 \

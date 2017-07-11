@@ -1,11 +1,6 @@
 import numpy as np
-from six.moves import cPickle as pickle
 import nibabel as nib
 import os
-
-
-
-
 import tensorflow as tf
 
 

@@ -2,8 +2,6 @@ import argparse
 import json
 import os
 import tensorflow as tf
-from six.moves import cPickle as pickle
-from tensorflow.python.lib.io import file_io
 import model
 
 tf.logging.set_verbosity(tf.logging.INFO)
@@ -20,7 +18,7 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
             features, labels = model.input_fn(file_path, num_epochs)
 
             # Returns the training graph and global step tensor
-            train_op, global_step = model.model_fn(features, labels, num_channels)
+            train_op, global_step, dice = model.model_fn(features, labels, num_channels)
 
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles
@@ -31,7 +29,8 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
                                                checkpoint_dir=job_dir,
                                                hooks=hooks,
                                                save_checkpoint_secs=60*15,
-                                               save_summaries_steps=1) as session:
+                                               save_summaries_steps=1,
+                                               log_step_count_steps=1) as session:
             # Global step to keep track of global number of steps particularly in
             # distributed setting
             step = global_step.eval(session=session)
@@ -40,9 +39,10 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
             # the global step tensor.
             # When train epochs is reached, session.should_stop() will be true. does nothing without queues
             while (train_steps is None or step < train_steps) and not session.should_stop():
-                step, _ = session.run([global_step, train_op])
+                step, _, dice_coef = session.run([global_step, train_op, dice])
                 if step % 1 == 0:
                     tf.logging.info('Step: {0}'.format(step))
+                    tf.logging.info('Dice Coefficient: {0}'.format(dice_coef))
 
 
 def dispatch(*args, **kwargs):
@@ -83,6 +83,7 @@ def dispatch(*args, **kwargs):
         server.join()
         return
     elif job_name in ['master', 'worker']:
+        tf.logging.info('Running in distributed mode')
         return run(server.target, job_name == 'master', *args, **kwargs)
 
 

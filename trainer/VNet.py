@@ -76,4 +76,4 @@ def v_net(tf_input, n_channels):
     # output 1x1x1 conv to give outputs, with 2 channels (classification result) and same dimension as input (no relu last layer)
     logits = convolution_layer_3d(d22, [1, 1, 1, n_channels, 1], [1, 1, 1, 1, 1])
 
-    return logits
+    return logits/10e30

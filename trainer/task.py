@@ -18,7 +18,7 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
             features, labels = model.input_fn(file_path, num_epochs)
 
             # Returns the training graph and global step tensor
-            train_op, global_step, dice, loss = model.model_fn(features, labels, num_channels)
+            train_op, global_step, dice, loss, g = model.model_fn(features, labels, num_channels)
 
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles
@@ -39,11 +39,12 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
             # the global step tensor.
             # When train epochs is reached, session.should_stop() will be true. does nothing without queues
             while (train_steps is None or step < train_steps) and not session.should_stop():
-                step, _, dice_coef, l = session.run([global_step, train_op, dice, loss])
+                step, _, dice_coef, l, g_ = session.run([global_step, train_op, dice, loss, g])
                 if step % 1 == 0:
                     tf.logging.info('Step: {0}'.format(step))
                     tf.logging.info('Loss: {0}'.format(l))
                     tf.logging.info('Dice Coefficient: {0}'.format(dice_coef))
+                    tf.logging.info('Norm of logits: {0}'.format(g_))
 
 
 def dispatch(*args, **kwargs):

@@ -63,8 +63,8 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
         learning_rate = tf.train.exponential_decay(.05, global_step, 100, 0.95)
         optimizer = tf.train.AdagradOptimizer(learning_rate)
         gradients, variables = zip(*optimizer.compute_gradients(loss))
-        gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
-        train_op = optimizer.apply_gradients(zip(gradients, variables))
+        gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
+        train_op = optimizer.apply_gradients(zip(gradients, variables), global_step=global_step)
 
     # Predictions for the training, validation, and test data.
     with tf.variable_scope('prediction'):
@@ -78,7 +78,9 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
 
     tf.summary.scalar('accuracy', accuracy(tf_ground_truth, tf_prediction))
 
-    return train_op, global_step, dice, loss
+    logit_norm = tf.norm(logits, ord=2)
+
+    return train_op, global_step, dice, loss, logit_norm
 
 
 def parse_example(serialized_example):

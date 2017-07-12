@@ -1,45 +1,10 @@
 import tensorflow as tf
-import multiprocessing
+from Layers import convolution_layer_3d, deconvolution_layer_3d
+from VNet import v_net
 
 TRAIN, EVAL, PREDICT = 'TRAIN', 'EVAL', 'PREDICT'
 CSV, EXAMPLE, JSON = 'CSV', 'EXAMPLE', 'JSON'
 PREDICTION_MODES = [CSV, EXAMPLE, JSON]
-
-
-def convolution_layer_3d(layer_num, layer_input, filter, strides, padding='VALID'):
-    assert len(filter) == 5  # [filter_depth, filter_height, filter_width, in_channels, out_channels]
-    assert len(strides) == 5  # must match input dimensions [batch, in_depth, in_height, in_width, in_channels]
-    assert padding in ['VALID', 'SAME']
-    layer_name = 'Conv3D_' + str(layer_num)
-    with tf.variable_scope(layer_name):
-        w = tf.Variable(initial_value=tf.truncated_normal(shape=filter), name='weights')
-        b = tf.Variable(tf.constant(1.0, shape=[filter[-1]]), name='biases')
-        convolution = tf.nn.conv3d(layer_input, w, strides, padding)
-        return convolution + b
-
-
-def deconvolution_layer_3d(layer_num, layer_input, filter, output_shape, strides, padding='VALID'):
-    assert len(filter) == 5  # [depth, height, width, output_channels, in_channels]
-    assert len(strides) == 5  # must match input dimensions [batch, depth, height, width, in_channels]
-    assert padding in ['VALID', 'SAME']
-    layer_name = 'Deconv3D_' + str(layer_num)
-    with tf.variable_scope(layer_name):
-        w = tf.Variable(initial_value=tf.truncated_normal(shape=filter), name='weights')
-        b = tf.Variable(tf.constant(1.0, shape=[filter[-2]]), name='biases')
-        deconvolution = tf.nn.conv3d_transpose(layer_input, w, output_shape, strides, padding)
-        return deconvolution + b
-
-
-def max_pooling_3d(layer_num, layer_input, ksize, strides, padding='VALID'):
-    assert len(ksize) == 5  # [batch, depth, rows, cols, channels]
-    assert len(strides) == 5  # [batch, depth, rows, cols, channels]
-    assert ksize[0] == ksize[4]
-    assert ksize[0] == 1
-    assert strides[0] == strides[4]
-    assert strides[0] == 1
-    layer_name = 'MaxPooling3D' + str(layer_num)
-    with tf.variable_scope(layer_name):
-        return tf.nn.max_pool3d(layer_input, ksize, strides, padding)
 
 
 def dice_coefficient(input1, input2):
@@ -68,16 +33,13 @@ def dice_loss(logits, ground_truth):
 
 
 def model_fn(tf_input_data, tf_ground_truth, n_channels):
-    # architecture
-    c1 = tf.nn.relu(convolution_layer_3d(1, tf_input_data, [5, 5, 5, n_channels, 32], [1, 1, 1, 1, 1]))
-    # c1 = max_pooling_3d(1, c1, [1, 3, 3, 3, 1], [1, 2, 2, 2, 1])
+    # architecture that learns residual functions (converge faster) and no pooling (because some work say its bad)
+    # c1 = tf.nn.relu(convolution_layer_3d(1, tf_input_data, [5, 5, 5, n_channels, 32], [1, 2, 2, 2, 1]))
+    # c2 = tf.nn.relu(convolution_layer_3d(2, c1, [5, 5, 5, 32, 64], [1, 2, 2, 2, 1]))
+    # d1 = tf.nn.relu(deconvolution_layer_3d(1, c2, [5, 5, 5, 32, 64], tf.shape(c1), [1, 2, 2, 2, 1]))
+    # logits = deconvolution_layer_3d(1, d1, [5, 5, 5, 1, 32], tf.shape(tf_ground_truth), [1, 2, 2, 2, 1])
 
-    c2 = tf.nn.relu(convolution_layer_3d(2, c1, [5, 5, 5, 32, 64], [1, 1, 1, 1, 1]))
-    # c2 = max_pooling_3d(2, c2, [1, 3, 3, 3, 1], [1, 2, 2, 2, 1])
-
-    d1 = tf.nn.relu(deconvolution_layer_3d(1, c2, [5, 5, 5, 32, 64], tf.shape(c1), [1, 1, 1, 1, 1]))
-
-    logits = deconvolution_layer_3d(1, d1, [5, 5, 5, 1, 32], tf.shape(tf_ground_truth), [1, 1, 1, 1, 1])
+    logits = v_net(tf_input_data, n_channels)
 
     # remove expanded dims (that were only necessary for FCN)
     logits = tf.squeeze(logits)
@@ -91,10 +53,18 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
     # global step
     global_step = tf.train.get_or_create_global_step()
 
-    # Optimizer.
+    # # Optimizer.
+    # with tf.variable_scope('optimizer'):
+    #     learning_rate = tf.train.exponential_decay(1e-3, global_step, 100, 0.95)
+    #     train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
+
+    # use gradient clipping o avoid exploding gradients
     with tf.variable_scope('optimizer'):
-        learning_rate = tf.train.exponential_decay(0.05, global_step, 10000, 0.95)
-        train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
+        learning_rate = tf.train.exponential_decay(.05, global_step, 100, 0.95)
+        optimizer = tf.train.AdagradOptimizer(learning_rate)
+        gradients, variables = zip(*optimizer.compute_gradients(loss))
+        gradients, _ = tf.clip_by_global_norm(gradients, 5.0)
+        train_op = optimizer.apply_gradients(zip(gradients, variables))
 
     # Predictions for the training, validation, and test data.
     with tf.variable_scope('prediction'):
@@ -108,7 +78,7 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
 
     tf.summary.scalar('accuracy', accuracy(tf_ground_truth, tf_prediction))
 
-    return train_op, global_step, dice
+    return train_op, global_step, dice, loss
 
 
 def parse_example(serialized_example):

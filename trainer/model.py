@@ -12,7 +12,7 @@ def dice_coefficient(input1, input2):
         intersection = tf.reduce_sum(input1 * input2)
         size_i1 = tf.reduce_sum(input1)
         size_i2 = tf.reduce_sum(input2)
-        return 2 * intersection / (size_i1 + size_i2)
+        return 100 * 2 * intersection / (size_i1 + size_i2)
 
 
 def accuracy(ground_truth, predictions):
@@ -28,8 +28,10 @@ def cross_entropy_loss(logits, ground_truth):
     return 100*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=ground_truth), name='loss')
 
 
-def dice_loss(logits, ground_truth):
-    return -dice_coefficient(logits, ground_truth)
+def soft_dice_loss(logits, ground_truth):
+    probabilities = tf.sigmoid(logits)
+    interception_volume = tf.reduce_sum(probabilities * ground_truth)
+    return - 2 * interception_volume / (tf.reduce_sum(ground_truth) + tf.reduce_sum(probabilities))
 
 
 def model_fn(tf_input_data, tf_ground_truth, n_channels):
@@ -42,15 +44,15 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
 
     # loss function
     with tf.variable_scope('loss_function'):
-        loss = cross_entropy_loss(logits, tf_ground_truth)
-        #loss = dice_loss(logits, tf_ground_truth)
+        #loss = cross_entropy_loss(logits, tf_ground_truth)
+        loss = soft_dice_loss(logits, tf_ground_truth)
 
     # global step
     global_step = tf.train.get_or_create_global_step()
 
     # # Optimizer.
     with tf.variable_scope('optimizer'):
-        learning_rate = tf.train.exponential_decay(1e-3, global_step, 50, 0.95)
+        learning_rate = tf.train.exponential_decay(1e-4, global_step, 50, 0.95)
         train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
 
     # use gradient clipping o avoid exploding gradients
@@ -91,12 +93,12 @@ def parse_example(serialized_example):
 
     with tf.variable_scope('decoder'):
         shape = tf.decode_raw(features['shape'], tf.int32)
-        image = tf.decode_raw(features['img_raw'], tf.float64)
+        image = tf.decode_raw(features['img_raw'], tf.float32)
         ground_truth = tf.decode_raw(features['gt_raw'], tf.uint8)
 
     with tf.variable_scope('image'):
         # reshape and add 0 dimension (would be batch dimension)
-        image = tf.cast(tf.expand_dims(tf.reshape(image, shape), 0), tf.float32)
+        image = tf.expand_dims(tf.reshape(image, shape), 0)
     with tf.variable_scope('ground_truth'):
         # reshape and add 0 dimension (would be batch dimension) and add last dimension (would be channel dimension)
         ground_truth = tf.cast(tf.expand_dims(tf.expand_dims(tf.reshape(ground_truth, shape[:-1]), 0), -1), tf.float32)

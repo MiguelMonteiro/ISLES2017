@@ -8,7 +8,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 
 def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
-    num_channels = 4
+    num_channels = 6
     hooks = []
     # Create a new graph and specify that as default
     with tf.Graph().as_default():

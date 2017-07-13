@@ -16,7 +16,7 @@ gcloud ml-engine local train \
 
 
 
-JOB_NAME=isles_cross_entropy_loss
+JOB_NAME=isles_soft_dice_loss_vnet
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles2017.tfrecord

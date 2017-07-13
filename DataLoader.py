@@ -20,8 +20,8 @@ def to_tf_record(image_list, ground_truth_list, tf_record_file_path):
 
         shape = np.array(image.shape).astype(np.int32)
 
-        # must set precision if using floats
-        np.set_printoptions(precision=64)
+        # set precision of string printing to be float32
+        np.set_printoptions(precision=32)
 
         example = tf.train.Example(features=tf.train.Features(feature={
             'shape': _bytes_feature(shape.tostring()),
@@ -43,7 +43,7 @@ def check_if_reconstructed_images_match_originals(image_list, ground_truth_list,
         example.ParseFromString(string_record)
 
         shape = np.fromstring(example.features.feature['shape'].bytes_list.value[0], dtype=np.int32)
-        image = np.fromstring(example.features.feature['img_raw'].bytes_list.value[0], dtype=np.float64)
+        image = np.fromstring(example.features.feature['img_raw'].bytes_list.value[0], dtype=np.float32)
         ground_truth = np.fromstring(example.features.feature['gt_raw'].bytes_list.value[0], dtype=np.uint8)
 
         # reshape
@@ -85,13 +85,13 @@ def build_multimodal_image(image_list):
     shape = image_list[0].shape
     for image in image_list:
         assert image.shape == shape
-    return np.stack(image_list).transpose((1, 2, 3, 0)).astype(np.float64)
+    return np.stack(image_list).transpose((1, 2, 3, 0)).astype(np.float32)
 
 
 # 4DPWI and ADC are raw data, the others are derived maps, OT is the expert segmentation
 # 4DPWI has a time dimension of 80 seconds (and already has the channel dimension added in)
 image_types = ['.MR_4DPWI', '.MR_ADC', '.MR_MTT', '.MR_rCBF', '.MR_rCBV', '.MR_Tmax', '.MR_TTP', '.OT']
-modes_to_use = ['.MR_ADC', '.MR_MTT', '.MR_rCBF', '.MR_rCBV']
+modes_to_use = ['.MR_ADC', '.MR_MTT', '.MR_rCBF', '.MR_rCBV', '.MR_Tmax', '.MR_TTP']
 
 image_list = []
 ground_truth_list = []
@@ -124,10 +124,3 @@ filename = os.path.join('isles2017' + '.tfrecord')
 
 to_tf_record(image_list, ground_truth_list, filename)
 check_if_reconstructed_images_match_originals(image_list, ground_truth_list, filename)
-
-# with open(filename, 'wb') as f:
-#     print('Pickling file: {0}'.format(filename))
-#     pickle.dump(data, f, pickle.HIGHEST_PROTOCOL)
-#     statinfo = os.stat(filename)
-#     print('Compressed pickle size:', statinfo.st_size / 1e6, ' MB')
-

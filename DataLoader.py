@@ -31,7 +31,7 @@ def to_tf_record(image_list, ground_truth_list, tf_record_file_path):
         writer.write(example.SerializeToString())
 
     writer.close()
-    print('Final file size:', os.stat(filename).st_size / 1e6, ' MB')
+    print('Final file size:', os.stat(tf_record_file_path).st_size / 1e6, ' MB')
 
 
 def check_if_reconstructed_images_match_originals(image_list, ground_truth_list, tf_record_file_path):

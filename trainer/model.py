@@ -52,7 +52,7 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
 
     # # Optimizer.
     with tf.variable_scope('optimizer'):
-        learning_rate = tf.train.exponential_decay(1e-4, global_step, 50, 0.95)
+        learning_rate = tf.train.exponential_decay(5e-3, global_step, 64, 0.95)
         train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
 
     # use gradient clipping o avoid exploding gradients

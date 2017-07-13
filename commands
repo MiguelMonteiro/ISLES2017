@@ -16,7 +16,7 @@ gcloud ml-engine local train \
 
 
 
-JOB_NAME=isles_soft_dice_loss_vnet
+JOB_NAME=isles_soft_dice_loss_vnet_greater_lr
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles2017.tfrecord
@@ -32,7 +32,7 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --region $REGION \
     -- \
     --file-path $DATA_PATH \
-    --train-steps 500 \
+    --train-steps 200 \
     --num-epochs 10 \
     --verbosity DEBUG
 

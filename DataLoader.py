@@ -95,7 +95,7 @@ modes_to_use = ['.MR_ADC', '.MR_MTT', '.MR_rCBF', '.MR_rCBV', '.MR_Tmax', '.MR_T
 
 image_list = []
 ground_truth_list = []
-
+shapes = []
 for folder in get_sub_folders('Training'):
     print(folder)
     buffer = []
@@ -114,6 +114,7 @@ for folder in get_sub_folders('Training'):
         image = im.get_data()
 
         if image_type == '.OT':
+            shapes.append(image.shape)
             ground_truth_list.append(image.astype(np.uint8))
         if image_type in modes_to_use:
             buffer.append(contrast_normalization(image))
@@ -121,6 +122,8 @@ for folder in get_sub_folders('Training'):
     image_list.append(build_multimodal_image(buffer))
 
 filename = os.path.join('isles2017' + '.tfrecord')
+
+np.unique(shapes, axis=0, return_counts=True)
 
 to_tf_record(image_list, ground_truth_list, filename)
 check_if_reconstructed_images_match_originals(image_list, ground_truth_list, filename)

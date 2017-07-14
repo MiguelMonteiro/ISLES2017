@@ -8,22 +8,19 @@ gcloud ml-engine local train \
     --package-path trainer/ \
     --distributed \
     -- \
-    --file-path $DATA_PATH \
+    --file-dir $DATA_PATH \
     --train-steps 2 \
     --job-dir $OUTPUT_PATH \
     --verbosity DEBUG
 
 
 
-JOB_NAME=isles_soft_dice_loss_vnet_verbose_3
 
-
-JOB_NAME=dir_test_2
+JOB_NAME=parallel_queue_test_2
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
 REGION=us-east1
-
 
 gcloud ml-engine jobs submit training $JOB_NAME \
     --job-dir $OUTPUT_PATH \
@@ -31,11 +28,11 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --module-name trainer.task \
     --package-path trainer/ \
     --scale-tier CUSTOM \
-    --config config.yaml \
+    --config config_cheap.yaml \
     --region $REGION \
     -- \
-    --file-path $DATA_PATH \
-    --train-steps 200 \
+    --file-dir $DATA_PATH \
+    --train-steps 30 \
     --num-epochs 10 \
     --verbosity DEBUG
 
@@ -45,30 +42,3 @@ python -m tensorflow.tensorboard --logdir=logs
 
 gsutil cp isles2017.tfrecord gs://coral-weaver-4010/data
 
-
-
-
-
-
-###
-
-
-JOB_NAME=dir_test_4
-
-BUCKET_NAME=coral-weaver-4010
-OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
-DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
-REGION=us-east1
-
-gcloud ml-engine jobs submit training $JOB_NAME \
-    --job-dir $OUTPUT_PATH \
-    --runtime-version 1.2 \
-    --module-name trainer.task \
-    --package-path trainer/ \
-    --scale-tier BASIC \
-    --region $REGION \
-    -- \
-    --file-path $DATA_PATH \
-    --train-steps 1 \
-    --num-epochs 10 \
-    --verbosity DEBUG

@@ -7,7 +7,7 @@ import model
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
+def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
     num_channels = 6
     hooks = []
     # Create a new graph and specify that as default
@@ -15,7 +15,7 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
         with tf.device(tf.train.replica_device_setter()):
 
             # Features and label tensors as read using filename queue
-            features, labels, names = model.input_fn(file_path, num_epochs)
+            features, labels, names = model.input_fn(file_dir, num_epochs)
 
             # Returns the training graph and global step tensor
             train_op, global_step, dice, loss = model.model_fn(features, labels, num_channels)
@@ -89,7 +89,7 @@ def dispatch(*args, **kwargs):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file-path',
+    parser.add_argument('--file-dir',
                         required=True,
                         type=str,
                         help='Input files local or GCS',

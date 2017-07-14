@@ -109,10 +109,11 @@ def parse_example(serialized_example):
     return image, ground_truth, example_name
 
 
-def input_fn(data_path, num_epochs=None, shuffle=True):
-    filenames = file_io.get_matching_files(data_path[0]+'/*tfrecord')
+def input_fn(file_dir, num_epochs=None, shuffle=False):
+    filenames = file_io.get_matching_files(file_dir[0]+'/*tfrecord')
     # using shared name ensures each worker takes a different example from the queue each time
-    filename_queue = tf.train.string_input_producer(filenames, num_epochs=None, shuffle=shuffle, capacity=100)
+    filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle, capacity=100,
+                                                    shared_name='train_queue')
     reader = tf.TFRecordReader()
     _, example = reader.read(filename_queue)
 

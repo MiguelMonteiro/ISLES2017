@@ -15,10 +15,10 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
         with tf.device(tf.train.replica_device_setter()):
 
             # Features and label tensors as read using filename queue
-            features, labels = model.input_fn(file_path, num_epochs)
+            features, labels, names = model.input_fn(file_path, num_epochs)
 
             # Returns the training graph and global step tensor
-            train_op, global_step, print_ops = model.model_fn(features, labels, num_channels)
+            train_op, global_step, dice, loss = model.model_fn(features, labels, num_channels)
 
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles
@@ -39,9 +39,10 @@ def run(target, is_chief, train_steps, job_dir, file_path, num_epochs):
             # the global step tensor.
             # When train epochs is reached, session.should_stop() will be true. does nothing without queues
             while (train_steps is None or step < train_steps) and not session.should_stop():
-                step, _, _ = session.run([global_step, train_op, print_ops])
+                step, _, d, l, n = session.run([global_step, train_op, dice, loss, names])
                 if step % 1 == 0:
                     tf.logging.info('Step: {}'.format(step))
+                    tf.logging.info('For {0} the dice coefficient is {1:.4f} and the loss is {2:.4f}'.format(n, d, l))
 
 
 def dispatch(*args, **kwargs):

@@ -7,12 +7,17 @@ CSV, EXAMPLE, JSON = 'CSV', 'EXAMPLE', 'JSON'
 PREDICTION_MODES = [CSV, EXAMPLE, JSON]
 
 
-def dice_coefficient(input1, input2):
+def jaccard_similarity_coefficient(volume_1, volume_2):
+    with tf.variable_scope('jaccard_similarity_coefficient'):
+        return tf.reduce_sum(tf.minimum(volume_1, volume_2)) / tf.reduce_sum(tf.maximum(volume_1, volume_2))
+
+
+def dice_coefficient(volume_1, volume_2):
     with tf.variable_scope('dice_coefficient'):
-        intersection = tf.reduce_sum(input1 * input2)
-        size_i1 = tf.reduce_sum(input1)
-        size_i2 = tf.reduce_sum(input2)
-        return 100 * 2 * intersection / (size_i1 + size_i2)
+        intersection = tf.reduce_sum(volume_1 * volume_2)
+        size_i1 = tf.norm(volume_1, ord=1)
+        size_i2 = tf.norm(volume_2, ord=1)
+        return 2 * intersection / (size_i1 + size_i2)
 
 
 def accuracy(ground_truth, predictions):
@@ -25,13 +30,13 @@ def cross_entropy_loss(logits, ground_truth):
     logits = tf.reshape(logits, (-1, ))
     ground_truth = tf.reshape(ground_truth, (-1,))
     # calculate reduce mean sigmoid cross entropy (even though all images are different size there's no problem)
-    return 100*tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=ground_truth), name='loss')
+    return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=ground_truth), name='loss')
 
 
 def soft_dice_loss(logits, ground_truth):
     probabilities = tf.sigmoid(logits)
     interception_volume = tf.reduce_sum(probabilities * ground_truth)
-    return - 2 * interception_volume / (tf.reduce_sum(ground_truth) + tf.reduce_sum(probabilities))
+    return - 2 * interception_volume / (tf.norm(ground_truth, ord=1) + tf.norm(probabilities, ord=1))
 
 
 def model_fn(tf_input_data, tf_ground_truth, n_channels):
@@ -75,10 +80,7 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
 
     tf.summary.scalar('accuracy', accuracy(tf_ground_truth, tf_prediction))
 
-    print_ops = [tf.Print(global_step, [global_step], 'Step '), tf.Print(dice, [dice], 'Dice Coefficient = '),
-                 tf.Print(loss, [loss], 'Loss = ')]
-
-    return train_op, global_step, print_ops
+    return train_op, global_step, dice, loss
 
 
 def parse_example(serialized_example):
@@ -88,13 +90,15 @@ def parse_example(serialized_example):
         features={
             'shape': tf.FixedLenFeature([], tf.string),
             'img_raw': tf.FixedLenFeature([], tf.string),
-            'gt_raw': tf.FixedLenFeature([], tf.string)
+            'gt_raw': tf.FixedLenFeature([], tf.string),
+            'example_name': tf.FixedLenFeature([], tf.string)
         })
 
     with tf.variable_scope('decoder'):
         shape = tf.decode_raw(features['shape'], tf.int32)
         image = tf.decode_raw(features['img_raw'], tf.float32)
         ground_truth = tf.decode_raw(features['gt_raw'], tf.uint8)
+        example_name = features['example_name']
 
     with tf.variable_scope('image'):
         # reshape and add 0 dimension (would be batch dimension)
@@ -102,12 +106,21 @@ def parse_example(serialized_example):
     with tf.variable_scope('ground_truth'):
         # reshape and add 0 dimension (would be batch dimension) and add last dimension (would be channel dimension)
         ground_truth = tf.cast(tf.expand_dims(tf.expand_dims(tf.reshape(ground_truth, shape[:-1]), 0), -1), tf.float32)
-    return image, ground_truth
+    return image, ground_truth, example_name
 
 
 def input_fn(filenames, num_epochs=None, shuffle=True):
+    # using shared name ensures each worker takes a different example from the queue each time
     filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle)
     reader = tf.TFRecordReader()
     _, example = reader.read(filename_queue)
-    image, ground_truth = parse_example(example)
-    return image, ground_truth
+
+    image, ground_truth, example_name = parse_example(example)
+
+    queue = tf.FIFOQueue(50, [tf.float32, tf.float32, tf.string])
+    enqueue_op = queue.enqueue([image, ground_truth, example_name])
+
+    qr = tf.train.QueueRunner(queue, [enqueue_op] * 2)
+    tf.train.add_queue_runner(qr)
+
+    return queue.dequeue()

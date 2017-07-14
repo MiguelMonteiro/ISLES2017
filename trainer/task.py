@@ -92,7 +92,8 @@ if __name__ == "__main__":
     parser.add_argument('--file-path',
                         required=True,
                         type=str,
-                        help='Input files local or GCS', nargs='+')
+                        help='Input files local or GCS',
+                        nargs='+')
     parser.add_argument('--job-dir',
                         required=True,
                         type=str,

@@ -1,6 +1,7 @@
 import tensorflow as tf
 from Layers import convolution_layer_3d, deconvolution_layer_3d
 from VNet import v_net
+from tensorflow.python.lib.io import file_io as file_io
 
 TRAIN, EVAL, PREDICT = 'TRAIN', 'EVAL', 'PREDICT'
 CSV, EXAMPLE, JSON = 'CSV', 'EXAMPLE', 'JSON'
@@ -27,7 +28,7 @@ def accuracy(ground_truth, predictions):
 
 def cross_entropy_loss(logits, ground_truth):
     # flatten
-    logits = tf.reshape(logits, (-1, ))
+    logits = tf.reshape(logits, (-1,))
     ground_truth = tf.reshape(ground_truth, (-1,))
     # calculate reduce mean sigmoid cross entropy (even though all images are different size there's no problem)
     return tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=logits, labels=ground_truth), name='loss')
@@ -40,7 +41,6 @@ def soft_dice_loss(logits, ground_truth):
 
 
 def model_fn(tf_input_data, tf_ground_truth, n_channels):
-
     logits = v_net(tf_input_data, n_channels)
 
     # remove expanded dims (that were only necessary for FCN)
@@ -49,7 +49,7 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
 
     # loss function
     with tf.variable_scope('loss_function'):
-        #loss = cross_entropy_loss(logits, tf_ground_truth)
+        # loss = cross_entropy_loss(logits, tf_ground_truth)
         loss = soft_dice_loss(logits, tf_ground_truth)
 
     # global step
@@ -109,18 +109,13 @@ def parse_example(serialized_example):
     return image, ground_truth, example_name
 
 
-def input_fn(filenames, num_epochs=None, shuffle=True):
+def input_fn(data_path, num_epochs=None, shuffle=True):
+    filenames = file_io.get_matching_files(data_path[0]+'/*tfrecord')
     # using shared name ensures each worker takes a different example from the queue each time
-    filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle)
+    filename_queue = tf.train.string_input_producer(filenames, num_epochs=None, shuffle=shuffle, capacity=100)
     reader = tf.TFRecordReader()
     _, example = reader.read(filename_queue)
 
     image, ground_truth, example_name = parse_example(example)
 
-    queue = tf.FIFOQueue(50, [tf.float32, tf.float32, tf.string])
-    enqueue_op = queue.enqueue([image, ground_truth, example_name])
-
-    qr = tf.train.QueueRunner(queue, [enqueue_op] * 2)
-    tf.train.add_queue_runner(qr)
-
-    return queue.dequeue()
+    return image, ground_truth, example_name

@@ -1,9 +1,7 @@
 #!/bin/bash
 
-JOB_NAME=svhn_20
-
 OUTPUT_PATH=logs
-DATA_PATH=isles2017.tfrecord
+DATA_PATH=isles_tfrecords
 
 gcloud ml-engine local train \
     --module-name trainer.task \
@@ -12,16 +10,20 @@ gcloud ml-engine local train \
     -- \
     --file-path $DATA_PATH \
     --train-steps 2 \
-    --job-dir $OUTPUT_PATH
+    --job-dir $OUTPUT_PATH \
+    --verbosity DEBUG
 
 
 
-JOB_NAME=isles_soft_dice_loss_vnet_verbose_2
+JOB_NAME=isles_soft_dice_loss_vnet_verbose_3
 
+
+JOB_NAME=dir_test_2
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
-DATA_PATH=gs://$BUCKET_NAME/data/isles2017.tfrecord
+DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
 REGION=us-east1
+
 
 gcloud ml-engine jobs submit training $JOB_NAME \
     --job-dir $OUTPUT_PATH \
@@ -42,3 +44,31 @@ python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH
 python -m tensorflow.tensorboard --logdir=logs
 
 gsutil cp isles2017.tfrecord gs://coral-weaver-4010/data
+
+
+
+
+
+
+###
+
+
+JOB_NAME=dir_test_4
+
+BUCKET_NAME=coral-weaver-4010
+OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
+DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
+REGION=us-east1
+
+gcloud ml-engine jobs submit training $JOB_NAME \
+    --job-dir $OUTPUT_PATH \
+    --runtime-version 1.2 \
+    --module-name trainer.task \
+    --package-path trainer/ \
+    --scale-tier BASIC \
+    --region $REGION \
+    -- \
+    --file-path $DATA_PATH \
+    --train-steps 1 \
+    --num-epochs 10 \
+    --verbosity DEBUG

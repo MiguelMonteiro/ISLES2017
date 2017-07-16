@@ -112,8 +112,19 @@ def parse_example(serialized_example):
 def input_fn(file_dir, num_epochs=None, shuffle=False):
     filenames = file_io.get_matching_files(file_dir[0]+'/*tfrecord')
     # using shared name ensures each worker takes a different example from the queue each time
-    filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle, capacity=100,
-                                                    shared_name='train_queue')
+
+    # filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle, capacity=100,
+    #                                                 shared_name='train_queue',
+    #                                                 cancel_op=tf.close(cancel_pending_enqueues=True))
+
+    filename_queue = tf.FIFOQueue(100, tf.string, shared_name='train_queue')
+    enque_op = filename_queue.enqueue_many([tf.train.limit_epochs(filenames, num_epochs)])
+    close_op = filename_queue.close(cancel_pending_enqueues=True)
+    qr = tf.train.QueueRunner(filename_queue, [enque_op], close_op,
+                              queue_closed_exception_types=(tf.errors.OutOfRangeError, tf.errors.CancelledError))
+
+    tf.train.add_queue_runner(qr)
+
     reader = tf.TFRecordReader()
     _, example = reader.read(filename_queue)
 

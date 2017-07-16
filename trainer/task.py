@@ -9,7 +9,7 @@ tf.logging.set_verbosity(tf.logging.INFO)
 
 def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
     num_channels = 6
-    hooks = []
+    hooks = [tf.train.StopAtStepHook(train_steps)]
     # Create a new graph and specify that as default
     with tf.Graph().as_default():
         with tf.device(tf.train.replica_device_setter()):
@@ -31,18 +31,16 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
                                                save_checkpoint_secs=60*15,
                                                save_summaries_steps=1,
                                                log_step_count_steps=5) as session:
-            # Global step to keep track of global number of steps particularly in
-            # distributed setting
-            step = global_step.eval(session=session)
-
             # Run the training graph which returns the step number as tracked by
             # the global step tensor.
-            # When train epochs is reached, session.should_stop() will be true. does nothing without queues
-            while (train_steps is None or step < train_steps) and not session.should_stop():
+            # When train epochs is reached, session.should_stop() will be true.
+            while not session.should_stop():
                 step, _, d, l, n = session.run([global_step, train_op, dice, loss, names])
                 if step % 1 == 0:
                     tf.logging.info('Step: {}'.format(step))
-                    tf.logging.info('For {0} the dice coefficient is {1:.4f} and the loss is {2:.4f}'.format(n, d, l))
+                    tf.logging.info(
+                        'For {0} the dice coefficient is {1:.4f} and the loss is {2:.4f}'.format(n, d, l))
+
 
 
 def dispatch(*args, **kwargs):

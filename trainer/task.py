@@ -3,23 +3,43 @@ import json
 import os
 import tensorflow as tf
 import model
+from EvaluationRunHook import EvaluationRunHook
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
 def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
     num_channels = 6
-    hooks = [tf.train.StopAtStepHook(train_steps)]
+    hooks = list()
+    # does not work well in distributed mode cause it only counts local steps
+    hooks.append(tf.train.StopAtStepHook(train_steps))
+
+    if is_chief:
+        evaluation_graph = tf.Graph()
+        with evaluation_graph.as_default():
+            # Features and label tensors
+            features, labels, names = model.input_fn(file_dir, 1, shuffle=False, shared_name=None)
+            # Returns dictionary of tensors to be evaluated
+            metric_dict = model.model_fn(model.EVAL, features, labels, num_channels)
+
+            hooks.append(EvaluationRunHook(job_dir, metric_dict, evaluation_graph))
+
     # Create a new graph and specify that as default
     with tf.Graph().as_default():
         with tf.device(tf.train.replica_device_setter()):
 
             # Features and label tensors as read using filename queue
-            features, labels, names = model.input_fn(file_dir, num_epochs)
+            image, ground_truth, name = model.input_fn(file_dir, num_epochs, shuffle=True, shared_name='train_queue')
 
             # Returns the training graph and global step tensor
-            train_op, global_step, dice, loss = model.model_fn(features, labels, num_channels)
+            train_op, global_step, dice, loss = model.model_fn(model.TRAIN, image, ground_truth, num_channels)
 
+            def formatter(d):
+                return'Step {0}: for {1} the dice coefficient is {2:.4f} and the loss is {3:.4f}'\
+                    .format(d[global_step], d[name], d[dice], d[loss])
+
+            # hook than logs training info to the console
+            hooks.append(tf.train.LoggingTensorHook([dice, loss, global_step, name], every_n_iter=1, formatter=formatter))
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles
         # initialization, recovery and hooks
@@ -28,19 +48,14 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
                                                is_chief=is_chief,
                                                checkpoint_dir=job_dir,
                                                hooks=hooks,
-                                               save_checkpoint_secs=60*15,
+                                               save_checkpoint_secs=60 * 4,
                                                save_summaries_steps=1,
                                                log_step_count_steps=5) as session:
             # Run the training graph which returns the step number as tracked by
             # the global step tensor.
             # When train epochs is reached, session.should_stop() will be true.
             while not session.should_stop():
-                step, _, d, l, n = session.run([global_step, train_op, dice, loss, names])
-                if step % 1 == 0:
-                    tf.logging.info('Step: {}'.format(step))
-                    tf.logging.info(
-                        'For {0} the dice coefficient is {1:.4f} and the loss is {2:.4f}'.format(n, d, l))
-
+                step, _ = session.run([global_step, train_op])
 
 
 def dispatch(*args, **kwargs):
@@ -81,7 +96,6 @@ def dispatch(*args, **kwargs):
         server.join()
         return
     elif job_name in ['master', 'worker']:
-        tf.logging.info('Running in distributed mode')
         return run(server.target, job_name == 'master', *args, **kwargs)
 
 

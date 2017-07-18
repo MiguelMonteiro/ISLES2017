@@ -1,7 +1,7 @@
 import tensorflow as tf
-from Layers import convolution_layer_3d, deconvolution_layer_3d
 from VNet import v_net
 from tensorflow.python.lib.io import file_io as file_io
+from random import shuffle as shuffle_fn
 
 TRAIN, EVAL, PREDICT = 'TRAIN', 'EVAL', 'PREDICT'
 CSV, EXAMPLE, JSON = 'CSV', 'EXAMPLE', 'JSON'
@@ -14,7 +14,7 @@ def jaccard_similarity_coefficient(volume_1, volume_2):
 
 
 def dice_coefficient(volume_1, volume_2):
-    with tf.variable_scope('dice_coefficient'):
+    with tf.variable_scope('calc_dice_coefficient'):
         intersection = tf.reduce_sum(volume_1 * volume_2)
         size_i1 = tf.norm(volume_1, ord=1)
         size_i2 = tf.norm(volume_2, ord=1)
@@ -22,7 +22,7 @@ def dice_coefficient(volume_1, volume_2):
 
 
 def accuracy(ground_truth, predictions):
-    with tf.variable_scope('accuracy'):
+    with tf.variable_scope('calc_accuracy'):
         return 100 * tf.reduce_mean(tf.cast(tf.equal(predictions, ground_truth), tf.float32))
 
 
@@ -40,7 +40,7 @@ def soft_dice_loss(logits, ground_truth):
     return - 2 * interception_volume / (tf.norm(ground_truth, ord=1) + tf.norm(probabilities, ord=1))
 
 
-def model_fn(tf_input_data, tf_ground_truth, n_channels):
+def model_fn(mode, tf_input_data, tf_ground_truth, n_channels):
     logits = v_net(tf_input_data, n_channels)
 
     # remove expanded dims (that were only necessary for FCN)
@@ -57,30 +57,25 @@ def model_fn(tf_input_data, tf_ground_truth, n_channels):
 
     # # Optimizer.
     with tf.variable_scope('optimizer'):
-        learning_rate = tf.train.exponential_decay(5e-3, global_step, 64, 0.95)
+        learning_rate = tf.train.exponential_decay(5e-3, global_step, 100, 0.95)
         train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
-
-    # use gradient clipping o avoid exploding gradients
-    # with tf.variable_scope('optimizer'):
-    #     learning_rate = tf.train.exponential_decay(.05, global_step, 100, 0.95)
-    #     optimizer = tf.train.AdagradOptimizer(learning_rate)
-    #     gradients, variables = zip(*optimizer.compute_gradients(loss))
-    #     gradients, _ = tf.clip_by_global_norm(gradients, 1.0)
-    #     train_op = optimizer.apply_gradients(zip(gradients, variables), global_step=global_step)
 
     # Predictions for the training, validation, and test data.
     with tf.variable_scope('prediction'):
         tf_prediction = tf.round(tf.sigmoid(logits))
 
+    dice = dice_coefficient(tf_prediction, tf_ground_truth)
+    acc = accuracy(tf_ground_truth, tf_prediction)
+
     tf.summary.scalar('loss', loss)
     tf.summary.scalar('learning_rate', learning_rate)
-
-    dice = dice_coefficient(tf_prediction, tf_ground_truth)
     tf.summary.scalar('dice_coefficient', dice)
+    tf.summary.scalar('accuracy', acc)
 
-    tf.summary.scalar('accuracy', accuracy(tf_ground_truth, tf_prediction))
-
-    return train_op, global_step, dice, loss
+    if mode == TRAIN:
+        return train_op, global_step, dice, loss
+    if mode == EVAL:
+        return {'dice_coefficient': dice, 'loss': loss, 'accuracy': acc}
 
 
 def parse_example(serialized_example):
@@ -109,16 +104,12 @@ def parse_example(serialized_example):
     return image, ground_truth, example_name
 
 
-def input_fn(file_dir, num_epochs=None, shuffle=False):
-    filenames = file_io.get_matching_files(file_dir[0]+'/*tfrecord')
-    # using shared name ensures each worker takes a different example from the queue each time
-
-    # filename_queue = tf.train.string_input_producer(filenames, num_epochs=num_epochs, shuffle=shuffle, capacity=100,
-    #                                                 shared_name='train_queue',
-    #                                                 cancel_op=tf.close(cancel_pending_enqueues=True))
-
-    filename_queue = tf.FIFOQueue(100, tf.string, shared_name='train_queue')
-    enque_op = filename_queue.enqueue_many([tf.train.limit_epochs(filenames, num_epochs)])
+def input_fn(file_dir, num_epochs=None, shuffle=False, shared_name=None):
+    file_names = file_io.get_matching_files(file_dir[0]+'/*tfrecord')
+    if shuffle:
+        shuffle_fn(file_names)
+    filename_queue = tf.FIFOQueue(100, tf.string, shared_name=shared_name)
+    enque_op = filename_queue.enqueue_many([tf.train.limit_epochs(file_names, num_epochs)])
     close_op = filename_queue.close(cancel_pending_enqueues=True)
     qr = tf.train.QueueRunner(filename_queue, [enque_op], close_op,
                               queue_closed_exception_types=(tf.errors.OutOfRangeError, tf.errors.CancelledError))

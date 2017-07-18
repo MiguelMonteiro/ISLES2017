@@ -8,7 +8,7 @@ from EvaluationRunHook import EvaluationRunHook
 tf.logging.set_verbosity(tf.logging.INFO)
 
 
-def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
+def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_rate):
     num_channels = 6
     hooks = list()
     # does not work well in distributed mode cause it only counts local steps
@@ -20,7 +20,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
             # Features and label tensors
             features, labels, names = model.input_fn(file_dir, 1, shuffle=False, shared_name=None)
             # Returns dictionary of tensors to be evaluated
-            metric_dict = model.model_fn(model.EVAL, features, labels, num_channels)
+            metric_dict = model.model_fn(model.EVAL, features, labels, num_channels, learning_rate)
 
             hooks.append(EvaluationRunHook(job_dir, metric_dict, evaluation_graph))
 
@@ -32,7 +32,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs):
             image, ground_truth, name = model.input_fn(file_dir, num_epochs, shuffle=True, shared_name='train_queue')
 
             # Returns the training graph and global step tensor
-            train_op, global_step, dice, loss = model.model_fn(model.TRAIN, image, ground_truth, num_channels)
+            train_op, global_step, dice, loss = model.model_fn(model.TRAIN, image, ground_truth, num_channels, learning_rate)
 
             def formatter(d):
                 return'Step {0}: for {1} the dice coefficient is {2:.4f} and the loss is {3:.4f}'\
@@ -119,6 +119,10 @@ if __name__ == "__main__":
     parser.add_argument('--num-epochs',
                         type=int,
                         help='Maximum number of epochs on which to train')
+    parser.add_argument('--learning-rate',
+                        type=float,
+                        default=1e-2,
+                        help='Initial learning rate')
     parser.add_argument('--verbosity',
                         choices=[
                             'DEBUG',

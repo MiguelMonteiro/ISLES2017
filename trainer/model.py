@@ -40,7 +40,7 @@ def soft_dice_loss(logits, ground_truth):
     return - 2 * interception_volume / (tf.norm(ground_truth, ord=1) + tf.norm(probabilities, ord=1))
 
 
-def model_fn(mode, tf_input_data, tf_ground_truth, n_channels):
+def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rate):
     logits = v_net(tf_input_data, n_channels)
 
     # remove expanded dims (that were only necessary for FCN)
@@ -57,7 +57,7 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels):
 
     # # Optimizer.
     with tf.variable_scope('optimizer'):
-        learning_rate = tf.train.exponential_decay(5e-3, global_step, 100, 0.95)
+        learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, 200, 0.95)
         train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
 
     # Predictions for the training, validation, and test data.

@@ -40,6 +40,10 @@ def soft_dice_loss(logits, ground_truth):
     return - 2 * interception_volume / (tf.norm(ground_truth, ord=1) + tf.norm(probabilities, ord=1))
 
 
+def mixed_loss(logits, ground_truth):
+    return cross_entropy_loss(logits, ground_truth) + soft_dice_loss(logits, ground_truth)
+
+
 def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rate):
 
     logits = v_net(tf_input_data, n_channels)
@@ -50,7 +54,7 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
 
     # loss function
     with tf.variable_scope('loss_function'):
-        loss = soft_dice_loss(logits, tf_ground_truth)
+        loss = mixed_loss(logits, tf_ground_truth)
 
     # global step
     global_step = tf.train.get_or_create_global_step()
@@ -105,8 +109,8 @@ def parse_example(serialized_example):
 
 def input_fn(file_dir, num_epochs=None, shuffle=False, shared_name=None):
     file_names = file_io.get_matching_files(file_dir[0]+'/*tfrecord')
-    # if shuffle:
-    #     shuffle_fn(file_names)
+    if shuffle:
+        shuffle_fn(file_names)
     filename_queue = tf.FIFOQueue(100, tf.string, shared_name=shared_name)
     enque_op = filename_queue.enqueue_many([tf.train.limit_epochs(file_names, num_epochs)])
     close_op = filename_queue.close(cancel_pending_enqueues=True)

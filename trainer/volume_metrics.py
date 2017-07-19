@@ -1019,12 +1019,14 @@ def __surface_distances(input1, input2, voxelspacing=None, connectivity=1):
     footprint = generate_binary_structure(input1.ndim, connectivity)
 
     # test for emptiness
-    if 0 == numpy.count_nonzero(input1):
-        raise RuntimeError('The first supplied array does not contain any binary object.')
-    if 0 == numpy.count_nonzero(input2):
-        raise RuntimeError('The second supplied array does not contain any binary object.')
+    # if 0 == numpy.count_nonzero(input1):
+    #     raise RuntimeError('The first supplied array does not contain any binary object.')
+    # if 0 == numpy.count_nonzero(input2):
+    #     raise RuntimeError('The second supplied array does not contain any binary object.')
 
-        # extract only 1-pixel border line of objects
+    if numpy.count_nonzero(input1) == 0 or numpy.count_nonzero(input2) == 0:
+        return numpy.max(numpy.shape(input1))
+    # extract only 1-pixel border line of objects
     input1_border = input1 - binary_erosion(input1, structure=footprint, iterations=1)
     input2_border = input2 - binary_erosion(input2, structure=footprint, iterations=1)
 

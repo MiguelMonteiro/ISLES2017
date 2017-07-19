@@ -150,17 +150,14 @@ class EvaluationRunHook(tf.train.SessionRunHook):
             # pop prediction and ground truth to calculate Hausdorff and ASSD and dice again (just as a check)
             predictions = dict_of_metrics.pop('prediction')
             ground_truths = dict_of_metrics.pop('ground_truth')
-            _hd, _assd, _obj_assd, _dice = [], [], [], []
-            for prediction, ground_truth in predictions, ground_truths:
+            _hd, _assd = [], []
+            for prediction, ground_truth in zip(predictions, ground_truths):
                 _hd.append(hd(prediction, ground_truth))
                 _assd.append(assd(prediction, ground_truth))
-                _obj_assd.append(obj_assd(prediction, ground_truth))
-                _dice.append(dc(prediction, ground_truth))
+
             # put them back in
             dict_of_metrics['Hausdorff_distance'] = _hd
             dict_of_metrics['average_symetric_surface_distance'] = _assd
-            # dict_of_metrics['obj_average_symetric_surface_distance'] = _obj_assd
-            dict_of_metrics['external_dice'] = _dice
 
             # Save histogram, mean and std for each variable
             for key, value in dict_of_metrics.iteritems():

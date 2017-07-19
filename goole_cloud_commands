@@ -9,7 +9,7 @@ gcloud ml-engine local train \
     --distributed \
     -- \
     --file-dir $DATA_PATH \
-    --train-steps 5 \
+    --train-steps 20 \
     --num-epochs 1 \
     --learning-rate .01 \
     --job-dir $OUTPUT_PATH \
@@ -17,7 +17,7 @@ gcloud ml-engine local train \
 
 
 
-JOB_NAME=isles_21
+JOB_NAME=isles_25
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -34,8 +34,8 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     -- \
     --file-dir $DATA_PATH \
     --learning-rate .01 \
-    --train-steps 10000 \
-    --num-epochs 5 \
+    --train-steps 500 \
+    --num-epochs 10 \
     --verbosity DEBUG
 
 python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH

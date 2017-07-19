@@ -17,8 +17,7 @@ gcloud ml-engine local train \
 
 
 
-
-JOB_NAME=isles_20
+JOB_NAME=isles_21
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords

@@ -73,7 +73,8 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
         tf.summary.scalar('accuracy', acc)
         return train_op, global_step, dice, loss
     if mode == EVAL:
-        return {'dice_coefficient': dice, 'loss': loss, 'accuracy': acc}
+        return {'dice_coefficient': dice, 'loss': loss, 'accuracy': acc, 'prediction': tf_prediction,
+                'ground_truth': tf_ground_truth}
 
 
 def parse_example(serialized_example):

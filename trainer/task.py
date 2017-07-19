@@ -11,17 +11,17 @@ tf.logging.set_verbosity(tf.logging.INFO)
 def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_rate):
     num_channels = 6
     hooks = list()
-    # does not work well in distributed mode cause it only counts local steps
+    # does not work well in distributed mode cause it only counts local steps (I think...)
     hooks.append(tf.train.StopAtStepHook(train_steps))
 
     if is_chief:
         evaluation_graph = tf.Graph()
         with evaluation_graph.as_default():
             # Features and label tensors
-            features, labels, names = model.input_fn(file_dir, 1, shuffle=False, shared_name=None)
+            image, ground_truth, name = model.input_fn(file_dir, 1, shuffle=False, shared_name=None)
             # Returns dictionary of tensors to be evaluated
-            metric_dict = model.model_fn(model.EVAL, features, labels, num_channels, learning_rate)
-
+            metric_dict = model.model_fn(model.EVAL, image, ground_truth, num_channels, learning_rate)
+            # hook that performs evaluation separate from training
             hooks.append(EvaluationRunHook(job_dir, metric_dict, evaluation_graph))
 
     # Create a new graph and specify that as default
@@ -34,12 +34,12 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             # Returns the training graph and global step tensor
             train_op, global_step, dice, loss = model.model_fn(model.TRAIN, image, ground_truth, num_channels, learning_rate)
 
+            # hook than logs training info to the console
             def formatter(d):
                 return'Step {0}: for {1} the dice coefficient is {2:.4f} and the loss is {3:.4f}'\
                     .format(d[global_step], d[name], d[dice], d[loss])
-
-            # hook than logs training info to the console
             hooks.append(tf.train.LoggingTensorHook([dice, loss, global_step, name], every_n_iter=1, formatter=formatter))
+
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles
         # initialization, recovery and hooks

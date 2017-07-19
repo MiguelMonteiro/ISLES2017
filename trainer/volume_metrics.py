@@ -1,3 +1,6 @@
+# I had to take this out of the MedPy package and change some of the code to get to work with the most recent numpy
+#  version
+
 # Copyright (C) 2013 Oskar Maier
 #
 # This program is free software: you can redistribute it and/or modify
@@ -31,7 +34,7 @@ from scipy.ndimage.measurements import label, find_objects
 # own modules
 
 # code
-def dice_coefficient(input1, input2):
+def dc(input1, input2):
     r"""
     Dice coefficient
 
@@ -81,7 +84,7 @@ def dice_coefficient(input1, input2):
     return dc
 
 
-def jaccard_coefficient(input1, input2):
+def jc(input1, input2):
     """
     Jaccard coefficient
 
@@ -217,7 +220,7 @@ def recall(input1, input2):
     return recall
 
 
-def hausdorff_distance(input1, input2, voxelspacing=None, connectivity=1):
+def hd(input1, input2, voxelspacing=None, connectivity=1):
     """
     Hausdorff Distance.
 
@@ -265,7 +268,7 @@ def hausdorff_distance(input1, input2, voxelspacing=None, connectivity=1):
     return hd
 
 
-def average_symmetric_surface_distance(input1, input2, voxelspacing=None, connectivity=1):
+def assd(input1, input2, voxelspacing=None, connectivity=1):
     """
     Average symmetric surface distance.
 
@@ -1021,9 +1024,9 @@ def __surface_distances(input1, input2, voxelspacing=None, connectivity=1):
     if 0 == numpy.count_nonzero(input2):
         raise RuntimeError('The second supplied array does not contain any binary object.')
 
-    # extract only 1-pixel border line of objects
-    input1_border = numpy.logical_xor(input1, binary_erosion(input1, structure=footprint, iterations=1))
-    input2_border = numpy.logical_xor(input2, binary_erosion(input2, structure=footprint, iterations=1))
+        # extract only 1-pixel border line of objects
+    input1_border = input1 - binary_erosion(input1, structure=footprint, iterations=1)
+    input2_border = input2 - binary_erosion(input2, structure=footprint, iterations=1)
 
     # compute average surface distance
     # Note: scipys distance transform is calculated only inside the borders of the

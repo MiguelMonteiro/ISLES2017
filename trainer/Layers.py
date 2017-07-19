@@ -1,5 +1,7 @@
 import tensorflow as tf
 
+# These initializers are probably incorrect but they work so far
+
 
 def xavier_normal_dist(shape):
     return tf.truncated_normal(shape, mean=0, stddev=tf.sqrt(3. / shape[-1] + shape[-2]))

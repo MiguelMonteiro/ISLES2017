@@ -18,7 +18,7 @@ gcloud ml-engine local train \
 
 
 
-JOB_NAME=isles_19
+JOB_NAME=isles_20
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -34,8 +34,8 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --region $REGION \
     -- \
     --file-dir $DATA_PATH \
+    --learning-rate .01 \
     --train-steps 10000 \
-    --learning-rate .025 \
     --num-epochs 5 \
     --verbosity DEBUG
 

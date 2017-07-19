@@ -41,6 +41,7 @@ def soft_dice_loss(logits, ground_truth):
 
 
 def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rate):
+
     logits = v_net(tf_input_data, n_channels)
 
     # remove expanded dims (that were only necessary for FCN)
@@ -49,30 +50,27 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
 
     # loss function
     with tf.variable_scope('loss_function'):
-        # loss = cross_entropy_loss(logits, tf_ground_truth)
         loss = soft_dice_loss(logits, tf_ground_truth)
 
     # global step
     global_step = tf.train.get_or_create_global_step()
 
-    # # Optimizer.
-    with tf.variable_scope('optimizer'):
-        learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, 200, 0.95)
-        train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
-
-    # Predictions for the training, validation, and test data.
+    # Predictions.
     with tf.variable_scope('prediction'):
         tf_prediction = tf.round(tf.sigmoid(logits))
 
     dice = dice_coefficient(tf_prediction, tf_ground_truth)
     acc = accuracy(tf_ground_truth, tf_prediction)
 
-    tf.summary.scalar('loss', loss)
-    tf.summary.scalar('learning_rate', learning_rate)
-    tf.summary.scalar('dice_coefficient', dice)
-    tf.summary.scalar('accuracy', acc)
-
     if mode == TRAIN:
+        # Optimizer.
+        with tf.variable_scope('optimizer'):
+            learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, 200, 0.95)
+            train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
+        tf.summary.scalar('loss', loss)
+        tf.summary.scalar('learning_rate', learning_rate)
+        tf.summary.scalar('dice_coefficient', dice)
+        tf.summary.scalar('accuracy', acc)
         return train_op, global_step, dice, loss
     if mode == EVAL:
         return {'dice_coefficient': dice, 'loss': loss, 'accuracy': acc}
@@ -106,8 +104,8 @@ def parse_example(serialized_example):
 
 def input_fn(file_dir, num_epochs=None, shuffle=False, shared_name=None):
     file_names = file_io.get_matching_files(file_dir[0]+'/*tfrecord')
-    if shuffle:
-        shuffle_fn(file_names)
+    # if shuffle:
+    #     shuffle_fn(file_names)
     filename_queue = tf.FIFOQueue(100, tf.string, shared_name=shared_name)
     enque_op = filename_queue.enqueue_many([tf.train.limit_epochs(file_names, num_epochs)])
     close_op = filename_queue.close(cancel_pending_enqueues=True)

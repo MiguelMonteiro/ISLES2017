@@ -2,7 +2,28 @@ import tensorflow as tf
 import numpy as np
 import os
 import threading
-from volume_metrics import hd, assd, obj_assd, dc
+from volume_metrics import hd, assd, dc
+import pydensecrf.densecrf as dcrf
+from pydensecrf.utils import create_pairwise_gaussian, create_pairwise_bilateral, unary_from_softmax
+
+
+def adjust_with_crf(probability, image):
+
+    crf = dcrf.DenseCRF(np.prod(probability.shape), 2)
+
+    binary_prob = np.stack((probability, 1 - probability), axis=-1)
+    unary = unary_from_softmax(binary_prob.transpose())
+    crf.setUnaryEnergy(unary)
+
+    smooth = create_pairwise_gaussian(sdims=(3, 3, 3), shape=probability.shape)
+    appearance = create_pairwise_bilateral(sdims=(50, 50, 50), schan=[1, 1, 1, 1, 1, 1], img=image, chdim=3)
+    crf.addPairwiseEnergy(smooth, compat=2)
+    crf.addPairwiseEnergy(appearance, compat=2)
+
+    # 5 iterations
+    result = crf.inference(5)
+
+    return np.argmax(result, axis=0).reshape(probability.shape)
 
 
 class Logger(object):
@@ -139,28 +160,33 @@ class EvaluationRunHook(tf.train.SessionRunHook):
             tf.train.start_queue_runners(coord=coord, sess=session)
             train_step = session.run(self._gs)
 
-            list_of_metric_dicts = []
             print('Starting evaluation')
+            d = {key: [] for key in ['loss', 'accuracy', 'dice_coefficient_pre_crf', 'hausdorff_distance_pre_crf',
+                                     'average_symmetric_surface_distance_pre_crf', 'dice_coefficient_pos_crf',
+                                     'hausdorff_distance_pos_crf', 'average_symmetric_surface_distance_pos_crf']}
             with coord.stop_on_exception():
                 while not coord.should_stop():
-                    list_of_metric_dicts.append(session.run(self._metric_dict))
+                    metric_dict = session.run(self._metric_dict)
 
-            dict_of_metrics = list_of_dict_to_dict_of_lists(list_of_metric_dicts)
+                    prediction = metric_dict.pop('prediction')
+                    ground_truth = metric_dict.pop('ground_truth')
+                    probability = metric_dict.pop('probability')
+                    image = metric_dict.pop('image')
 
-            # pop prediction and ground truth to calculate Hausdorff and ASSD and dice again (just as a check)
-            predictions = dict_of_metrics.pop('prediction')
-            ground_truths = dict_of_metrics.pop('ground_truth')
-            _hd, _assd = [], []
-            for prediction, ground_truth in zip(predictions, ground_truths):
-                _hd.append(hd(prediction, ground_truth))
-                _assd.append(assd(prediction, ground_truth))
+                    d['loss'].append(metric_dict.pop('loss'))
+                    d['accuracy'].append(metric_dict.pop('accuracy'))
+                    d['dice_coefficient_pre_crf'].append(metric_dict.pop('dice_coefficient'))
+                    d['hausdorff_distance_pre_crf'].append(hd(prediction, ground_truth))
+                    d['average_symmetric_surface_distance_pre_crf'].append(assd(prediction, ground_truth))
 
-            # put them back in
-            dict_of_metrics['Hausdorff_distance'] = _hd
-            dict_of_metrics['average_symetric_surface_distance'] = _assd
+                    # post process with crf
+                    crf_prediction = adjust_with_crf(probability, image)
+                    d['dice_coefficient_pos_crf'].append(dc(crf_prediction, ground_truth))
+                    d['hausdorff_distance_pos_crf'].append(hd(crf_prediction, ground_truth))
+                    d['average_symmetric_surface_distance_pos_crf'].append(assd(crf_prediction, ground_truth))
 
             # Save histogram, mean and std for each variable
-            for key, value in dict_of_metrics.iteritems():
+            for key, value in d.iteritems():
                 self.logger.log_histogram(tag=key, values=value, step=train_step, bins=15)
                 self.logger.log_random_variable(tag='eval_'+key, var=value, step=train_step)
             print('Finished evaluation')

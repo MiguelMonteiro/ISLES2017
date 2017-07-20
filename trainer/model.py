@@ -51,6 +51,7 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
     # remove expanded dims (that were only necessary for FCN)
     logits = tf.squeeze(logits)
     tf_ground_truth = tf.squeeze(tf_ground_truth)
+    tf_input_data = tf.squeeze(tf_input_data)
 
     # loss function
     with tf.variable_scope('loss_function'):
@@ -60,11 +61,11 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
     global_step = tf.train.get_or_create_global_step()
 
     # Predictions.
-    with tf.variable_scope('prediction'):
-        tf_prediction = tf.round(tf.sigmoid(logits))
+    probability = tf.sigmoid(logits, name='probability')
+    prediction = tf.round(probability, name='prediction')
 
-    dice = dice_coefficient(tf_prediction, tf_ground_truth)
-    acc = accuracy(tf_ground_truth, tf_prediction)
+    dice = dice_coefficient(prediction, tf_ground_truth)
+    acc = accuracy(tf_ground_truth, prediction)
 
     if mode == TRAIN:
         # Optimizer.
@@ -77,8 +78,8 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
         tf.summary.scalar('accuracy', acc)
         return train_op, global_step, dice, loss
     if mode == EVAL:
-        return {'dice_coefficient': dice, 'loss': loss, 'accuracy': acc, 'prediction': tf_prediction,
-                'ground_truth': tf_ground_truth}
+        return {'dice_coefficient': dice, 'loss': loss, 'accuracy': acc, 'prediction': prediction,
+                'ground_truth': tf_ground_truth, 'probability': probability, 'image': tf_input_data}
 
 
 def parse_example(serialized_example):

@@ -115,3 +115,7 @@ logs/*
 
 # End of https://www.gitignore.io/api/python
 /SingleDigitClassification/logs/
+/trainer.egg-info/
+/dist/
+!/pydensecrf-master/
+/pydensecrf-master/

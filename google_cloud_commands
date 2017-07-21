@@ -17,7 +17,7 @@ gcloud ml-engine local train \
 
 
 
-JOB_NAME=isles_25
+JOB_NAME=package_test_15
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -27,16 +27,53 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --job-dir $OUTPUT_PATH \
     --runtime-version 1.2 \
     --module-name trainer.task \
-    --package-path trainer/ \
-    --scale-tier CUSTOM \
-    --config config.yaml \
+    --packages trainer-0.1.tar.gz,pydensecrf.tar.gz \
     --region $REGION \
     -- \
     --file-dir $DATA_PATH \
     --learning-rate .01 \
-    --train-steps 500 \
-    --num-epochs 10 \
+    --train-steps 1 \
+    --num-epochs 1 \
     --verbosity DEBUG
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+gcloud ml-engine jobs submit training $JOB_NAME \
+    --job-dir $OUTPUT_PATH \
+    --runtime-version 1.2 \
+    --module-name trainer.task \
+    --package-path trainer/ \
+    --packages pydensecrf-0.1.tar.gz \
+    --scale-tier CUSTOM \
+    --config config_cheap.yaml \
+    --region $REGION \
+    -- \
+    --file-dir $DATA_PATH \
+    --learning-rate .01 \
+    --train-steps 1 \
+    --num-epochs 1 \
+    --verbosity DEBUG
+
+
+
 
 python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH
 

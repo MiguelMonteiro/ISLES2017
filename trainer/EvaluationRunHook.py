@@ -21,7 +21,7 @@ def adjust_with_crf(probability, image):
     crf.addPairwiseEnergy(appearance, compat=2)
 
     # 5 iterations
-    result = crf.inference(5)
+    result = crf.inference(2)
 
     return np.argmax(result, axis=0).reshape(probability.shape)
 
@@ -73,14 +73,6 @@ class Logger(object):
         summary = tf.Summary(value=[tf.Summary.Value(tag=tag, histo=hist)])
         self.writer.add_summary(summary, step)
         self.writer.flush()
-
-
-def list_of_dict_to_dict_of_lists(list_of_dict):
-    dict_of_list = {key: [] for key in list_of_dict[0].keys()}
-    for el in list_of_dict:
-        for key in dict_of_list.keys():
-            dict_of_list[key].append(el[key])
-    return dict_of_list
 
 
 class EvaluationRunHook(tf.train.SessionRunHook):

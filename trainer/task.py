@@ -4,6 +4,7 @@ import os
 import tensorflow as tf
 import model
 from EvaluationRunHook import EvaluationRunHook
+from tensorflow.python.saved_model import signature_constants as sig_constants
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -20,7 +21,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             # Features and label tensors
             image, ground_truth, name = model.input_fn(file_dir, 1, shuffle=False, shared_name=None)
             # Returns dictionary of tensors to be evaluated
-            metric_dict = model.model_fn(model.EVAL, image, ground_truth, num_channels, learning_rate)
+            metric_dict = model.model_fn(model.EVAL, name, image, ground_truth, num_channels, learning_rate)
             # hook that performs evaluation separate from training
             hooks.append(EvaluationRunHook(job_dir, metric_dict, evaluation_graph))
 
@@ -32,7 +33,8 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             image, ground_truth, name = model.input_fn(file_dir, num_epochs, shuffle=True, shared_name='train_queue')
 
             # Returns the training graph and global step tensor
-            train_op, global_step, dice, loss = model.model_fn(model.TRAIN, image, ground_truth, num_channels, learning_rate)
+            train_op, global_step, dice, loss = model.model_fn(model.TRAIN, name, image, ground_truth, num_channels,
+                                                               learning_rate)
 
             # hook than logs training info to the console
             def formatter(d):
@@ -56,6 +58,51 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             # When train epochs is reached, session.should_stop() will be true.
             while not session.should_stop():
                 step, _ = session.run([global_step, train_op])
+
+        # Find the filename of the latest saved checkpoint file
+        latest_checkpoint = tf.train.latest_checkpoint(job_dir)
+
+        # Only perform this if chief
+        if is_chief:
+            build_and_run_exports(latest_checkpoint, job_dir, model.serving_input_fn, num_channels, learning_rate)
+
+
+def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learning_rate):
+
+    prediction_graph = tf.Graph()
+    exporter = tf.saved_model.builder.SavedModelBuilder(
+            os.path.join(job_dir, 'export'))
+    with prediction_graph.as_default():
+        image, name, inputs_dict = serving_input_fn()
+        prediction_dict = model.model_fn(model.PREDICT, name, image, None, num_channels, learning_rate)
+
+        saver = tf.train.Saver()
+
+        inputs_info = {name: tf.saved_model.utils.build_tensor_info(tensor)
+                       for name, tensor in inputs_dict.iteritems()}
+
+        output_info = {name: tf.saved_model.utils.build_tensor_info(tensor)
+                       for name, tensor in prediction_dict.iteritems()}
+
+        signature_def = tf.saved_model.signature_def_utils.build_signature_def(
+                inputs=inputs_info,
+                outputs=output_info,
+                method_name=sig_constants.PREDICT_METHOD_NAME
+        )
+
+    with tf.Session(graph=prediction_graph) as session:
+        session.run([tf.local_variables_initializer(), tf.tables_initializer()])
+        saver.restore(session, latest)
+        exporter.add_meta_graph_and_variables(
+                session,
+                tags=[tf.saved_model.tag_constants.SERVING],
+                signature_def_map={
+                        sig_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
+                },
+                legacy_init_op=tf.saved_model.main_op.main_op()
+        )
+
+    exporter.save()
 
 
 def dispatch(*args, **kwargs):

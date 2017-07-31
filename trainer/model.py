@@ -5,12 +5,6 @@ from random import shuffle as shuffle_fn
 
 TRAIN, EVAL, PREDICT = 'TRAIN', 'EVAL', 'PREDICT'
 CSV, EXAMPLE, JSON = 'CSV', 'EXAMPLE', 'JSON'
-PREDICTION_MODES = [CSV, EXAMPLE, JSON]
-
-
-def jaccard_similarity_coefficient(volume_1, volume_2):
-    with tf.variable_scope('jaccard_similarity_coefficient'):
-        return tf.reduce_sum(tf.minimum(volume_1, volume_2)) / tf.reduce_sum(tf.maximum(volume_1, volume_2))
 
 
 def dice_coefficient(volume_1, volume_2):
@@ -44,14 +38,20 @@ def mixed_loss(logits, ground_truth):
     return cross_entropy_loss(logits, ground_truth) + soft_dice_loss(logits, ground_truth)
 
 
-def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rate):
+def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learning_rate):
 
     logits = v_net(tf_input_data, n_channels)
 
     # remove expanded dims (that were only necessary for FCN)
     logits = tf.squeeze(logits)
     tf_ground_truth = tf.squeeze(tf_ground_truth)
-    tf_input_data = tf.squeeze(tf_input_data)
+
+    # Predictions.
+    probability = tf.sigmoid(logits, name='probability')
+    prediction = tf.round(probability, name='prediction')
+
+    if mode == PREDICT:
+        return {'name': name, 'prediction': prediction, 'probability': probability}
 
     # loss function
     with tf.variable_scope('loss_function'):
@@ -59,10 +59,6 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
 
     # global step
     global_step = tf.train.get_or_create_global_step()
-
-    # Predictions.
-    probability = tf.sigmoid(logits, name='probability')
-    prediction = tf.round(probability, name='prediction')
 
     dice = dice_coefficient(prediction, tf_ground_truth)
     acc = accuracy(tf_ground_truth, prediction)
@@ -77,9 +73,19 @@ def model_fn(mode, tf_input_data, tf_ground_truth, n_channels, init_learning_rat
         tf.summary.scalar('dice_coefficient', dice)
         tf.summary.scalar('accuracy', acc)
         return train_op, global_step, dice, loss
+
     if mode == EVAL:
-        return {'dice_coefficient': dice, 'loss': loss, 'accuracy': acc, 'prediction': prediction,
-                'ground_truth': tf_ground_truth, 'probability': probability, 'image': tf_input_data}
+        return {'name': name, 'dice_coefficient': dice, 'loss': loss, 'accuracy': acc, 'prediction': prediction,
+                'ground_truth': tf_ground_truth}
+
+
+def serving_input_fn():
+
+    example = tf.placeholder(shape=[1], dtype=tf.string)
+
+    image, _, example_name = parse_example(example)
+
+    return image, example_name, {'example': example}
 
 
 def parse_example(serialized_example):

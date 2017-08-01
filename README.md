@@ -1,5 +1,5 @@
-#!/bin/bash
-
+To run locally but using google cloud:
+```
 OUTPUT_PATH=logs
 DATA_PATH=isles_tfrecords
 
@@ -14,10 +14,9 @@ gcloud ml-engine local train \
     --learning-rate .01 \
     --job-dir $OUTPUT_PATH \
     --verbosity INFO
-
-
-________________
-
+````
+To run using on the cloud just to test if everything is working (almost free):
+````
 JOB_NAME=model_export_test_6
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
@@ -36,10 +35,10 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --train-steps 1 \
     --num-epochs 1 \
     --verbosity DEBUG
-
-
-
-JOB_NAME=crf_test_1
+````
+To run on google cloud using GPUs (expensive):
+````
+JOB_NAME=isles_26
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -56,18 +55,12 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     -- \
     --file-dir $DATA_PATH \
     --learning-rate .01 \
-    --train-steps 200 \
+    --train-steps 500 \
     --num-epochs 10 \
     --verbosity DEBUG
-
-
-python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH
-
-python -m tensorflow.tensorboard --logdir=logs
-
-gsutil cp isles2017.tfrecord gs://coral-weaver-4010/data
-
-
+````
+To get predictions from the model
+````
 DATA_FORMAT=TF_RECORD
 BUCKET_NAME=coral-weaver-4010
 INPUT_PATHS=gs://$BUCKET_NAME/data/isles_tfrecords/*
@@ -85,3 +78,6 @@ gcloud ml-engine jobs submit prediction $JOB_NAME \
     --output-path $OUTPUT_PATH \
     --region $REGION \
     --data-format $DATA_FORMAT
+````
+
+

@@ -33,14 +33,9 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             image, ground_truth, name = model.input_fn(file_dir, num_epochs, shuffle=True, shared_name='train_queue')
 
             # Returns the training graph and global step tensor
-            train_op, global_step, dice, loss = model.model_fn(model.TRAIN, name, image, ground_truth, num_channels,
-                                                               learning_rate)
-
-            # hook than logs training info to the console
-            def formatter(d):
-                return'Step {0}: for {1} the dice coefficient is {2:.4f} and the loss is {3:.4f}'\
-                    .format(d[global_step], d[name], d[dice], d[loss])
-            hooks.append(tf.train.LoggingTensorHook([dice, loss, global_step, name], every_n_iter=1, formatter=formatter))
+            train_op, log_hook = model.model_fn(model.TRAIN, name, image, ground_truth, num_channels, learning_rate)
+            # Hook that logs training to the console
+            hooks.append(log_hook)
 
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles
@@ -57,21 +52,20 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             # the global step tensor.
             # When train epochs is reached, session.should_stop() will be true.
             while not session.should_stop():
-                step, _ = session.run([global_step, train_op])
-
-        # Find the filename of the latest saved checkpoint file
-        latest_checkpoint = tf.train.latest_checkpoint(job_dir)
+                session.run(train_op)
 
         # Only perform this if chief
         if is_chief:
+            # Find the filename of the latest saved checkpoint file
+            latest_checkpoint = tf.train.latest_checkpoint(job_dir)
             build_and_run_exports(latest_checkpoint, job_dir, model.serving_input_fn, num_channels, learning_rate)
 
 
 def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learning_rate):
 
     prediction_graph = tf.Graph()
-    exporter = tf.saved_model.builder.SavedModelBuilder(
-            os.path.join(job_dir, 'export'))
+    exporter = tf.saved_model.builder.SavedModelBuilder(os.path.join(job_dir, 'export'))
+
     with prediction_graph.as_default():
         image, name, inputs_dict = serving_input_fn()
         prediction_dict = model.model_fn(model.PREDICT, name, image, None, num_channels, learning_rate)
@@ -96,9 +90,7 @@ def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learn
         exporter.add_meta_graph_and_variables(
                 session,
                 tags=[tf.saved_model.tag_constants.SERVING],
-                signature_def_map={
-                        sig_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def
-                },
+                signature_def_map={sig_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def},
                 legacy_init_op=tf.saved_model.main_op.main_op()
         )
 

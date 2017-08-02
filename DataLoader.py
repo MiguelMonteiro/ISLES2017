@@ -12,7 +12,7 @@ def _int64_feature(value):
     return tf.train.Feature(int64_list=tf.train.Int64List(value=[value]))
 
 
-def to_tf_record(data, file_dir):
+def to_tfrecord(data, file_dir):
 
     for key, values in data.iteritems():
         writer = tf.python_io.TFRecordWriter(os.path.join(file_dir, key+'.tfrecord'))
@@ -104,4 +104,4 @@ for folder in get_sub_folders('Training'):
 
 np.unique(shapes, axis=0, return_counts=True)
 file_dir = 'isles_tfrecords'
-to_tf_record(data, file_dir)
+to_tfrecord(data, file_dir)

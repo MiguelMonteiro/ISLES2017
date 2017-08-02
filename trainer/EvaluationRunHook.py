@@ -124,14 +124,11 @@ class EvaluationRunHook(tf.train.SessionRunHook):
             # Restores previously saved variables from latest checkpoint
             self._saver.restore(session, self._latest_checkpoint)
 
-            session.run([
-                tf.tables_initializer(),
-                tf.local_variables_initializer()
-            ])
+            session.run([tf.tables_initializer(), tf.local_variables_initializer()])
             tf.train.start_queue_runners(coord=coord, sess=session)
             train_step = session.run(self._gs)
 
-            print('Starting evaluation')
+            tf.logging.info('Starting evaluation')
             d = {key: [] for key in ['loss', 'accuracy', 'dice_coefficient', 'hausdorff_distance',
                                      'average_symmetric_surface_distance']}
             with coord.stop_on_exception():
@@ -151,4 +148,4 @@ class EvaluationRunHook(tf.train.SessionRunHook):
             for key, value in d.iteritems():
                 self.logger.log_histogram(tag=key, values=value, step=train_step, bins=15)
                 self.logger.log_random_variable(tag='eval_'+key, var=value, step=train_step)
-            print('Finished evaluation')
+            tf.logging.info('Finished evaluation')

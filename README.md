@@ -36,7 +36,7 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     --num-epochs 1 \
     --verbosity DEBUG
 ````
-To run on google cloud using GPUs (expensive):
+To run on google cloud using GPUs (expensive about 5$):
 ````
 JOB_NAME=isles_26
 BUCKET_NAME=coral-weaver-4010
@@ -64,13 +64,13 @@ To get predictions from the model
 DATA_FORMAT=TF_RECORD
 BUCKET_NAME=coral-weaver-4010
 INPUT_PATHS=gs://$BUCKET_NAME/data/isles_tfrecords/*
-OUTPUT_PATH=gs://$BUCKET_NAME/predictions
-MODEL_NAME=test_model
-VERSION_NAME=v2
+MODEL_NAME=isles_2017
+VERSION_NAME=v1
 REGION=us-east1
 now=$(date +"%Y%m%d_%H%M%S")
-JOB_NAME=test_predict_$now
-MAX_WORKER_COUNT=5
+JOB_NAME=isles_predict_$now
+OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME/predictions
+MAX_WORKER_COUNT=15
 
 gcloud ml-engine jobs submit prediction $JOB_NAME \
     --model $MODEL_NAME \

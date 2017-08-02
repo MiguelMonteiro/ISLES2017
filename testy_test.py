@@ -54,8 +54,6 @@ request = cloudml.projects().jobs().create(body=job_spec, parent=project_id)
 response = request.execute()
 
 request = cloudml.projects().jobs().create(body=job_spec, parent=project_id)
-response = request.execute()
-
 
 try:
     response = request.execute()
@@ -68,3 +66,18 @@ except errors.HttpError, err:
     logging.error('There was an error creating the training job.'
                   ' Check the details:')
     logging.error(err._get_reason())
+
+
+
+
+import tensorflow as tf
+from tensorflow.python.platform import gfile
+with tf.Session() as sess:
+    model_filename = 'export/saved_model.pb'
+    with gfile.FastGFile(model_filename, 'rb') as f:
+        graph_def = tf.GraphDef()
+        graph_def.ParseFromString(f.read())
+        g_in = tf.import_graph_def(graph_def)
+LOGDIR='YOUR_LOG_LOCATION'
+train_writer = tf.summary.FileWriter(LOGDIR)
+train_writer.add_graph(sess.graph)

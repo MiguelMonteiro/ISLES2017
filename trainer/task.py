@@ -5,6 +5,9 @@ import tensorflow as tf
 import model
 from EvaluationRunHook import EvaluationRunHook
 from tensorflow.python.saved_model import signature_constants as sig_constants
+from tensorflow.python.ops import variables
+from tensorflow.python.ops import lookup_ops
+from tensorflow.python.ops import control_flow_ops
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -58,12 +61,17 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
         if is_chief:
             # Find the filename of the latest saved checkpoint file
             latest_checkpoint = tf.train.latest_checkpoint(job_dir)
-            tf.logging.info(latest_checkpoint)
             build_and_run_exports(latest_checkpoint, job_dir, model.serving_input_fn, num_channels, learning_rate)
 
 
-def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learning_rate):
+def my_main_op():
+    init_local = variables.local_variables_initializer()
+    init_tables = lookup_ops.tables_initializer()
+    return control_flow_ops.group(init, init_local, init_tables)
 
+
+def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learning_rate):
+    tf.logging.info('Exporting model from checkpoint {0}'.format(latest))
     prediction_graph = tf.Graph()
     exporter = tf.saved_model.builder.SavedModelBuilder(os.path.join(job_dir, 'export'))
 
@@ -86,13 +94,13 @@ def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learn
         )
 
     with tf.Session(graph=prediction_graph) as session:
-        session.run([tf.local_variables_initializer(), tf.tables_initializer()])
         saver.restore(session, latest)
+        session.run([tf.local_variables_initializer(), tf.tables_initializer()])
         exporter.add_meta_graph_and_variables(
                 session,
                 tags=[tf.saved_model.tag_constants.SERVING],
                 signature_def_map={sig_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY: signature_def},
-                legacy_init_op=tf.saved_model.main_op.main_op()
+                legacy_init_op=my_main_op()
         )
 
     exporter.save()

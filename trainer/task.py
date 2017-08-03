@@ -7,7 +7,6 @@ from EvaluationRunHook import EvaluationRunHook
 from tensorflow.python.saved_model import signature_constants as sig_constants
 from tensorflow.python.ops import variables
 from tensorflow.python.ops import lookup_ops
-from tensorflow.python.ops import control_flow_ops
 
 tf.logging.set_verbosity(tf.logging.INFO)
 
@@ -67,7 +66,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
 def my_main_op():
     init_local = variables.local_variables_initializer()
     init_tables = lookup_ops.tables_initializer()
-    return control_flow_ops.group(init, init_local, init_tables)
+    return tf.group(init_local, init_tables)
 
 
 def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learning_rate):
@@ -95,7 +94,7 @@ def build_and_run_exports(latest, job_dir, serving_input_fn, num_channels, learn
 
     with tf.Session(graph=prediction_graph) as session:
         saver.restore(session, latest)
-        session.run([tf.local_variables_initializer(), tf.tables_initializer()])
+        # session.run([tf.local_variables_initializer(), tf.tables_initializer()])
         exporter.add_meta_graph_and_variables(
                 session,
                 tags=[tf.saved_model.tag_constants.SERVING],

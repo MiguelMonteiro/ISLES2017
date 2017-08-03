@@ -5,31 +5,62 @@ import tensorflow as tf
 from trainer.volume_metrics import dc, hd, assd
 import pydensecrf.densecrf as dcrf
 from pydensecrf.utils import create_pairwise_gaussian, create_pairwise_bilateral, unary_from_softmax
+import nibabel as nib
+
+
+def export_data():
+    predictions_dir = 'train_predictions'
+    image_dir = 'Training'
+
+    for file_path in os.listdir(predictions_dir):
+        name, prediction, probability = read_prediction_file(os.path.join(predictions_dir, file_path))
+
+        # build a .nii image
+        img = nib.Nifti1Image(prediction, np.eye(4))
+        img.set_data_dtype(dtype=np.uint8)
+
+        path = os.path.join(image_dir, name)
+
+        adc_name = next(l for l in os.listdir(path) if 'MR_ADC' in l)
+        export_image = nib.load(os.path.join(image_dir, name, adc_name, adc_name + '.nii'))
+
+        i = export_image.get_data()
+        i[:] = img.get_data()
+
+        # set name to specification and export
+        _id = next(l for l in os.listdir(path) if 'MR_MTT' in l).split('.')[-1]
+        export_path = os.path.join('export_files', 'SMIR.' + name + '.' + _id + '.nii')
+        nib.save(export_image, os.path.join(export_path))
+
+    print('Finished exporting')
 
 
 def adjust_with_crf(probability, image):
 
     crf = dcrf.DenseCRF(np.prod(probability.shape), 2)
+    #crf = dcrf.DenseCRF(np.prod(probability.shape), 1)
 
-    binary_prob = np.stack((probability, 1 - probability), axis=-1)
-    unary = unary_from_softmax(binary_prob.transpose())
+    binary_prob = np.stack((1 - probability, probability), axis=0)
+    unary = unary_from_softmax(binary_prob)
+    #unary = unary_from_softmax(np.expand_dims(probability, axis=0))
     crf.setUnaryEnergy(unary)
 
     # per dimension scale factors
-    sdims = [1] * 3
+    sdims = [2] * 3
     # per channel scale factors
     schan = [1] * 6
 
-    per_channel_scale_factor = 1
     smooth = create_pairwise_gaussian(sdims=sdims, shape=probability.shape)
-    appearance = create_pairwise_bilateral(sdims=sdims, schan=schan, img=image, chdim=3)
+    #appearance = create_pairwise_bilateral(sdims=sdims, schan=schan, img=image, chdim=3)
     crf.addPairwiseEnergy(smooth, compat=2)
-    crf.addPairwiseEnergy(appearance, compat=2)
+    #crf.addPairwiseEnergy(appearance, compat=2)
 
     # 5 iterations
-    result = crf.inference(1)
+    result = crf.inference(2)
 
-    return np.argmax(result, axis=0).reshape(probability.shape)
+    crf_prediction = np.argmax(result, axis=0).reshape(probability.shape).astype(np.float32)
+
+    return crf_prediction
 
 
 def read_prediction_file(file_path):
@@ -77,19 +108,22 @@ def adjust_training_data():
         metrics['dc_post_crf'].append(dc(crf_prediction, ground_truth))
         metrics['hd_post_crf'].append(hd(crf_prediction, ground_truth))
         metrics['assd_post_crf'].append(assd(crf_prediction, ground_truth))
+
+
     return metrics
 
-m = adjust_training_data()
-for key, metric in m.iteritems():
-    mean = np.mean(metric)
-    std = np.std(metric)
-    minimum = np.min(metric)
-    maximum = np.max(metric)
-    print(key)
-    print('\tMean: {0:.2f}'.format(mean))
-    print('\tStandard Deviation: {0:.2f}'.format(std))
-    print('\tMinimum: {0:.2f}'.format(minimum))
-    print('\tMaximum: {0:.2f}'.format(maximum))
+export_data()
+# m = adjust_training_data()
+# for key, metric in m.iteritems():
+#     mean = np.mean(metric)
+#     std = np.std(metric)
+#     minimum = np.min(metric)
+#     maximum = np.max(metric)
+#     print(key)
+#     print('\tMean: {0:.3f}'.format(mean))
+#     print('\tStandard Deviation: {0:.3f}'.format(std))
+#     print('\tMinimum: {0:.3f}'.format(minimum))
+#     print('\tMaximum: {0:.3f}'.format(maximum))
 
 
 

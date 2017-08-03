@@ -18,7 +18,7 @@ gcloud ml-engine local train \
 
 ________________
 
-JOB_NAME=model_export_test_9
+JOB_NAME=isles_27
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -35,13 +35,12 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     -- \
     --file-dir $DATA_PATH \
     --learning-rate .01 \
-    --train-steps 100 \
-    --num-epochs 2 \
+    --train-steps 500 \
+    --num-epochs 20 \
     --verbosity DEBUG
 
 export MODEL_BINARIES=$OUTPUT_PATH/export/
-gcloud ml-engine versions create v3 --model isles_2017 --origin $MODEL_BINARIES --runtime-version 1.2
-
+gcloud ml-engine versions create v4 --model isles_2017 --origin $MODEL_BINARIES --runtime-version 1.2
 
 
 python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH
@@ -69,3 +68,4 @@ gcloud ml-engine jobs submit prediction $JOB_NAME \
     --data-format $DATA_FORMAT
     --max-worker-count=MAX_WORKER_COUNT
 
+gsutil cp $OUTPUT_PATH/* training_predictions/

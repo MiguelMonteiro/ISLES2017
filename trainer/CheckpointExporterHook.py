@@ -4,7 +4,6 @@ import threading
 from tensorflow.python.saved_model import signature_constants as sig_constants
 from tensorflow.python.ops import variables
 from tensorflow.python.ops import lookup_ops
-from tensorflow.python.lib.io import file_io as file_io
 import model
 import re
 

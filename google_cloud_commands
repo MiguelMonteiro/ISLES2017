@@ -18,7 +18,7 @@ gcloud ml-engine local train \
 
 ________________
 
-JOB_NAME=checkpoint_saver_test_3
+JOB_NAME=isles_28
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -35,12 +35,12 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     -- \
     --file-dir $DATA_PATH \
     --learning-rate .01 \
-    --train-steps 100 \
-    --num-epochs 10 \
+    --train-steps 1000 \
+    --num-epochs 30 \
     --verbosity DEBUG
 
-export MODEL_BINARIES=$OUTPUT_PATH/export/
-gcloud ml-engine versions create v4 --model isles_2017 --origin $MODEL_BINARIES --runtime-version 1.2
+export MODEL_BINARIES=$OUTPUT_PATH/export_ckpt_960/
+gcloud ml-engine versions create v5 --model isles_2017 --origin $MODEL_BINARIES --runtime-version 1.2
 
 
 python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH

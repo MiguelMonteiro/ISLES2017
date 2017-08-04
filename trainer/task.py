@@ -46,7 +46,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
                                                is_chief=is_chief,
                                                checkpoint_dir=job_dir,
                                                hooks=hooks,
-                                               save_checkpoint_secs=60*2,
+                                               save_checkpoint_secs=60*3,
                                                save_summaries_steps=1,
                                                log_step_count_steps=5) as session:
             # Run the training graph which returns the step number as tracked by

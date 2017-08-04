@@ -46,7 +46,7 @@ def adjust_with_crf(probability, image):
     crf.setUnaryEnergy(unary)
 
     # per dimension scale factors
-    sdims = [2] * 3
+    sdims = [3] * 3
     # per channel scale factors
     schan = [1] * 6
 
@@ -88,7 +88,7 @@ def get_original_image(image_path, is_training_data=False):
 
 
 def adjust_training_data():
-    predictions_dir = 'train_predictions'
+    predictions_dir = 'training_predictions'
     image_dir = 'isles_tfrecords'
 
     metrics = {key: [] for key in['dc_pre_crf', 'hd_pre_crf', 'assd_pre_crf', 'dc_post_crf', 'hd_post_crf',
@@ -112,18 +112,18 @@ def adjust_training_data():
 
     return metrics
 
-export_data()
-# m = adjust_training_data()
-# for key, metric in m.iteritems():
-#     mean = np.mean(metric)
-#     std = np.std(metric)
-#     minimum = np.min(metric)
-#     maximum = np.max(metric)
-#     print(key)
-#     print('\tMean: {0:.3f}'.format(mean))
-#     print('\tStandard Deviation: {0:.3f}'.format(std))
-#     print('\tMinimum: {0:.3f}'.format(minimum))
-#     print('\tMaximum: {0:.3f}'.format(maximum))
+#export_data()
+m = adjust_training_data()
+for key, metric in m.iteritems():
+    mean = np.mean(metric)
+    std = np.std(metric)
+    minimum = np.min(metric)
+    maximum = np.max(metric)
+    print(key)
+    print('\tMean: {0:.3f}'.format(mean))
+    print('\tStandard Deviation: {0:.3f}'.format(std))
+    print('\tMinimum: {0:.3f}'.format(minimum))
+    print('\tMaximum: {0:.3f}'.format(maximum))
 
 
 

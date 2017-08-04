@@ -5,7 +5,6 @@ from Layers import convolution_layer_3d, deconvolution_layer_3d, prelu
 # n_channels = 16
 # interpretation of Vnet
 def v_net(tf_input, n_channels):
-
     with tf.variable_scope('encoder_level_1'):
         # convolution 5x5x5 filter with stride 1 (keeps same dimension as input)
         with tf.variable_scope('convolution_1'):

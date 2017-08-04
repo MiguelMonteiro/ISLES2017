@@ -107,7 +107,7 @@ ENV/
 *.csv
 test/*
 Training/*
-train_predictions/*
+training_predictions/*
 export_files/*
 *.zip
 *.tfrecord

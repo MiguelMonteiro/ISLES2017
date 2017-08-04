@@ -9,7 +9,7 @@ gcloud ml-engine local train \
     --distributed \
     -- \
     --file-dir $DATA_PATH \
-    --train-steps 1 \
+    --train-steps 20 \
     --num-epochs 1 \
     --learning-rate .01 \
     --job-dir $OUTPUT_PATH \
@@ -18,7 +18,7 @@ gcloud ml-engine local train \
 
 ________________
 
-JOB_NAME=isles_27
+JOB_NAME=checkpoint_saver_test_3
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -35,8 +35,8 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     -- \
     --file-dir $DATA_PATH \
     --learning-rate .01 \
-    --train-steps 500 \
-    --num-epochs 20 \
+    --train-steps 100 \
+    --num-epochs 10 \
     --verbosity DEBUG
 
 export MODEL_BINARIES=$OUTPUT_PATH/export/

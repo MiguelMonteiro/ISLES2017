@@ -50,6 +50,7 @@ python -m tensorflow.tensorboard --logdir=logs
 gsutil cp isles2017.tfrecord gs://coral-weaver-4010/data
 
 
+
 DATA_FORMAT=TF_RECORD
 BUCKET_NAME=coral-weaver-4010
 INPUT_PATHS=gs://$BUCKET_NAME/data/isles_tfrecords/*
@@ -69,3 +70,4 @@ gcloud ml-engine jobs submit prediction $JOB_NAME \
     --max-worker-count=MAX_WORKER_COUNT
 
 gsutil cp $OUTPUT_PATH/* training_predictions/
+gsutil cp gs://coral-weaver-4010/isles_predict_20170804_150716/predictions/* training_predictions/

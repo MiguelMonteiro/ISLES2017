@@ -103,7 +103,6 @@ def adjust_training_data(sdims, schan):
     for file_path in os.listdir(predictions_dir):
         name, prediction, probability = read_prediction_file(os.path.join(predictions_dir, file_path))
         image, ground_truth = get_original_image(os.path.join(image_dir, name+'.tfrecord'), True)
-        print(name)
 
         metrics['dc']['pre_crf'].append(dc(prediction, ground_truth))
         metrics['hd']['pre_crf'].append(hd(prediction, ground_truth))
@@ -125,20 +124,20 @@ def report_metric(pre_crf, post_crf):
         print('\t{0}'.format(name))
         print('\t\tpre crf: {0:.3f} \t post crf {1:.3f} \t change: {2:.3f}%'.format(pre, post, (post-pre)/pre*100))
 
-sdims_values = [.5, .75, 1, 2, 5, 10, 30]
-schan_values = [.5, .75, 1, 2, 5, 10, 30]
+sdims_values = [.5, .75, 1, 2]
+schan_values = [.5, .75, 1, 2]
 
-output = []
+output = {}
 for sdims in sdims_values:
     for schan in schan_values:
+        print('sdims: {0:.2f}, schan: {1:.2f}'.format(sdims, schan))
         m = adjust_training_data(sdims, schan)
         for key, metric in m.iteritems():
             names = {'dc': 'Dice Coefficient', 'hd': 'Hausdorff Distance', 'assd': 'Average Symmetric Surface Distance'}
             print(' ')
             print(names[key])
             report_metric(metric['pre_crf'], metric['post_crf'])
-        output.append(m)
-        break
+        output.update({(sdims, schan): m})
 
 with open('output.pickle', 'w') as f:
     pickle.dump(output, f)

@@ -1,7 +1,7 @@
 #!/bin/bash
 
 OUTPUT_PATH=logs
-DATA_PATH=isles_tfrecords
+DATA_PATH=DataFiles/training_tfrecords
 
 gcloud ml-engine local train \
     --module-name trainer.task \
@@ -9,7 +9,7 @@ gcloud ml-engine local train \
     --distributed \
     -- \
     --file-dir $DATA_PATH \
-    --train-steps 20 \
+    --train-steps 1 \
     --num-epochs 1 \
     --learning-rate .01 \
     --job-dir $OUTPUT_PATH \
@@ -18,7 +18,7 @@ gcloud ml-engine local train \
 
 ________________
 
-JOB_NAME=isles_28
+JOB_NAME=isles_33
 BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
@@ -35,12 +35,12 @@ gcloud ml-engine jobs submit training $JOB_NAME \
     -- \
     --file-dir $DATA_PATH \
     --learning-rate .01 \
-    --train-steps 1000 \
-    --num-epochs 30 \
+    --train-steps 1500 \
+    --num-epochs 40 \
     --verbosity DEBUG
 
-export MODEL_BINARIES=$OUTPUT_PATH/export_ckpt_960/
-gcloud ml-engine versions create v5 --model isles_2017 --origin $MODEL_BINARIES --runtime-version 1.2
+export MODEL_BINARIES=$OUTPUT_PATH/export_ckpt_1504
+gcloud ml-engine versions create v7 --model isles_2017 --origin $MODEL_BINARIES --runtime-version 1.2
 
 
 python -m tensorflow.tensorboard --logdir=$OUTPUT_PATH
@@ -54,6 +54,7 @@ gsutil cp isles2017.tfrecord gs://coral-weaver-4010/data
 DATA_FORMAT=TF_RECORD
 BUCKET_NAME=coral-weaver-4010
 INPUT_PATHS=gs://$BUCKET_NAME/data/isles_tfrecords/*
+INPUT_PATHS=gs://$BUCKET_NAME/data/testing_tfrecords/*
 MODEL_NAME=isles_2017
 REGION=us-east1
 now=$(date +"%Y%m%d_%H%M%S")
@@ -66,8 +67,11 @@ gcloud ml-engine jobs submit prediction $JOB_NAME \
     --input-paths $INPUT_PATHS \
     --output-path $OUTPUT_PATH \
     --region $REGION \
-    --data-format $DATA_FORMAT
-    --max-worker-count=MAX_WORKER_COUNT
+    --data-format $DATA_FORMAT \
+    --max-worker-count=$MAX_WORKER_COUNT
 
-gsutil cp $OUTPUT_PATH/* training_predictions/
+
+
+
+gsutil cp $OUTPUT_PATH/* DataFiles/raw_testing_predictions/
 gsutil cp gs://coral-weaver-4010/isles_predict_20170804_150716/predictions/* training_predictions/

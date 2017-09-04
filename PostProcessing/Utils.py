@@ -8,7 +8,7 @@ import nibabel as nib
 
 
 class CRF(object):
-    def __init__(self, sdims, schan):
+    def __init__(self, sdims, schan=None):
         self.sdims = sdims
         self.schan = schan
 
@@ -21,18 +21,18 @@ class CRF(object):
         # unary = unary_from_softmax(np.expand_dims(probability, axis=0))
         crf.setUnaryEnergy(unary)
 
-        # # per dimension scale factors
+        # per dimension scale factors
         sdims = [self.sdims] * 3
-        # # per channel scale factors
-        schan = [self.schan] * 6
-
         smooth = create_pairwise_gaussian(sdims=sdims, shape=probability.shape)
-        appearance = create_pairwise_bilateral(sdims=sdims, schan=schan, img=image, chdim=3)
         crf.addPairwiseEnergy(smooth, compat=2)
-        crf.addPairwiseEnergy(appearance, compat=2)
+
+        if self.schan:
+            # per channel scale factors
+            schan = [self.schan] * 6
+            appearance = create_pairwise_bilateral(sdims=sdims, schan=schan, img=image, chdim=3)
+            crf.addPairwiseEnergy(appearance, compat=2)
 
         result = crf.inference(iter)
-
         crf_prediction = np.argmax(result, axis=0).reshape(probability.shape).astype(np.float32)
 
         return crf_prediction
@@ -44,8 +44,8 @@ def export_data(prediction_dir, nii_image_dir, tfrecords_dir, export_dir, crf=No
         name, prediction, probability = read_prediction_file(os.path.join(prediction_dir, file_path))
 
         if crf:
-            image, ground_truth = get_original_image(os.path.join(tfrecords_dir, name + '.tfrecord'), True)
-            prediction = crf.adjust_prediction(probability, image)
+            image, ground_truth = get_original_image(os.path.join(tfrecords_dir, name + '.tfrecord'), False)
+            prediction = crf.adjust_prediction(probability, image, iter=5)
 
         # build a .nii image
         img = nib.Nifti1Image(prediction, np.eye(4))

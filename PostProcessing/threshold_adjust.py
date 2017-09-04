@@ -1,11 +1,10 @@
-import cPickle as pickle
 import numpy as np
 import os
-from PostProcessing.Utils import CRF, read_prediction_file, get_original_image
+from PostProcessing.Utils import read_prediction_file, get_original_image
 from trainer.volume_metrics import dc, hd, assd
 
 
-def adjust_training_data(sdims, schan):
+def adjust_training_data(threshold):
     prediction_dir = 'DataFiles/raw_training_predictions'
     image_dir = 'DataFiles/training_tfrecords'
     metrics = {outer_key: {inner_key: [] for inner_key in ['pre_crf', 'post_crf']} for outer_key in ['dc', 'hd', 'assd']}
@@ -18,8 +17,7 @@ def adjust_training_data(sdims, schan):
         metrics['hd']['pre_crf'].append(hd(prediction, ground_truth))
         metrics['assd']['pre_crf'].append(assd(prediction, ground_truth))
 
-        crf = CRF(sdims, schan)
-        crf_prediction = crf.adjust_prediction(probability, image, iter=5)
+        crf_prediction = np.round(np.array(probability) + .5 - threshold)
 
         metrics['dc']['post_crf'].append(dc(crf_prediction, ground_truth))
         metrics['hd']['post_crf'].append(hd(crf_prediction, ground_truth))
@@ -36,57 +34,15 @@ def report_metric(pre_crf, post_crf):
         print('\t\tpre crf: {0:.3f} \t post crf {1:.3f} \t change: {2:.3f}%'.format(pre, post, (post-pre)/pre*100))
 
 os.chdir('../')
-
-# sdims_values = [2]
-# schan_values = []
-#
-# output = []
-# for sdims in sdims_values:
-#     for schan in schan_values:
-#         print('sdims: {0:.2f}, schan: {1:.2f}'.format(sdims, schan))
-#         m = adjust_training_data(sdims, schan)
-#         for key, metric in m.iteritems():
-#             names = {'dc': 'Dice Coefficient', 'hd': 'Hausdorff Distance', 'assd': 'Average Symmetric Surface Distance'}
-#             print(' ')
-#             print(names[key])
-#             report_metric(metric['pre_crf'], metric['post_crf'])
-#         output.append([(sdims, schan), m])
-
-
-
-sdims_values = [50]
+thresholds = [.6, .7]
 
 output = []
-for sdims in sdims_values:
-    print('sdims: {0:.2f}'.format(sdims))
-    m = adjust_training_data(sdims, None)
+for threshold in thresholds:
+    print(threshold)
+    m = adjust_training_data(threshold)
     for key, metric in m.iteritems():
         names = {'dc': 'Dice Coefficient', 'hd': 'Hausdorff Distance', 'assd': 'Average Symmetric Surface Distance'}
         print(' ')
         print(names[key])
         report_metric(metric['pre_crf'], metric['post_crf'])
 
-
-# with open('output.pickle', 'w') as f:
-#     pickle.dump(output, f)
-#
-# with open('output.pickle', 'r') as f:
-#     output = pickle.load(f)
-#
-#
-# def sort_function(item):
-#     pre = np.mean(item[1]['dc']['pre_crf'])
-#     post = np.mean(item[1]['dc']['post_crf'])
-#     return (post-pre)/pre*100
-#
-#
-# sorted_ouput = sorted(output, key=sort_function)
-#
-# for i in sorted_ouput:
-#     print i[0]
-#     print('dc')
-#     report_metric(i[1]['dc']['pre_crf'], i[1]['dc']['post_crf'])
-#     print('hd')
-#     report_metric(i[1]['hd']['pre_crf'], i[1]['hd']['post_crf'])
-#     print('assd')
-#     report_metric(i[1]['assd']['pre_crf'], i[1]['assd']['post_crf'])

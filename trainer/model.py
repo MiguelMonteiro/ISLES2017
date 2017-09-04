@@ -38,7 +38,6 @@ def mixed_loss(logits, ground_truth):
 
 
 def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learning_rate):
-
     logits = v_net(tf_input_data, n_channels)
     # remove expanded dims (that were only necessary for FCN)
     logits = tf.squeeze(logits)
@@ -72,6 +71,7 @@ def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learni
         def formatter(d):
             return 'Step {0}: for {1} the dice coefficient is {2:.4f} and the loss is {3:.4f}' \
                 .format(d[global_step], d[name], d[dice], d[loss])
+
         log_hook = tf.train.LoggingTensorHook([dice, loss, global_step, name], every_n_iter=1, formatter=formatter)
 
         return train_op, log_hook
@@ -82,7 +82,7 @@ def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learni
 
 
 def serving_input_fn():
-    example = tf.placeholder(shape=(1,), dtype=tf.string)
+    example = tf.placeholder(shape=(None, ), dtype=tf.string)
     image, _, example_name = parse_example(tf.squeeze(example))
     return image, example_name, {'example': example}
 
@@ -115,7 +115,7 @@ def parse_example(serialized_example):
 
 def input_fn(file_dir, num_epochs=None, shuffle=False, shared_name=None):
     # get file names from given directory
-    file_names = file_io.get_matching_files(file_dir[0]+'/*tfrecord')
+    file_names = file_io.get_matching_files(file_dir[0] + '/*tfrecord')
 
     # shuffle if required
     if shuffle:

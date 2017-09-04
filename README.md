@@ -81,7 +81,7 @@ gcloud ml-engine jobs submit prediction $JOB_NAME \
 ````
 Copy the output from google cloud (you may have to create a local directory first):
 ````
-gsutil cp $OUTPUT_PATH/* DataFiles/raw_train_predictions/
+gsutil cp $OUTPUT_PATH/* DataFiles/raw_training_predictions/
 ````
 
 To get the predictions for the test set run the commands above but change the input path to:

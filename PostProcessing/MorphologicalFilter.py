@@ -5,19 +5,25 @@ from PostProcessing.Utils import adjust_training_data
 
 
 def remove(prediction, threshold=.5):
-    new_prediction = prediction
-    labeled, n_objects = ndimage.label(prediction > 0)
-    max_area = 0
-    for object in range(1, n_objects + 1):
-        area = np.sum(prediction[labeled == object])
-        if area > max_area:
-            max_area = area
-    for object in range(1, n_objects + 1):
-        area = np.sum(prediction[labeled == object])
-        if area < threshold * max_area:
-            new_prediction[labeled == object] = 0
-    return new_prediction
 
+    new_prediction = prediction
+
+    labeled, n_objects = ndimage.label(prediction > 0)
+
+    max_volume = 0
+
+    volumes = {}
+
+    for object_n in range(1, n_objects + 1):
+        volume = np.sum(prediction[labeled == object_n])
+        if volume > max_volume:
+            max_volume = volume
+        volumes.update({object_n: volume})
+
+    for object_n, volume in volumes.iteritems():
+        if volume < threshold * max_volume:
+            new_prediction[labeled == object_n] = 0
+    return new_prediction
 
 os.chdir('../')
 

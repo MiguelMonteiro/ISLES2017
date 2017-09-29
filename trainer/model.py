@@ -74,7 +74,11 @@ def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learni
 
         log_hook = tf.train.LoggingTensorHook([dice, loss, global_step, name], every_n_iter=1, formatter=formatter)
 
-        return train_op, log_hook
+        tf.summary.scalar('training_dice', dice)
+        tf.summary.scalar('training_loss', loss)
+        train_summaries = tf.summary.merge_all()
+
+        return train_op, log_hook, train_summaries
 
     if mode == EVAL:
         return {'name': name, 'dice_coefficient': dice, 'loss': loss, 'accuracy': acc, 'prediction': prediction,

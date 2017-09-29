@@ -25,11 +25,12 @@ def remove(prediction, threshold=.5):
             new_prediction[labeled == object_n] = 0
     return new_prediction
 
+
 os.chdir('../')
 
 
 def transform(prediction, probability, image):
-    return remove(prediction, .75)
+    return remove(prediction, .99)
 
 m = adjust_training_data(transform)
 

@@ -5,9 +5,18 @@ import tensorflow as tf
 import model
 from EvaluationRunHook import EvaluationRunHook
 from CheckpointExporterHook import CheckpointExporterHook
-
+from tensorflow.python.lib.io import file_io as file_io
 
 tf.logging.set_verbosity(tf.logging.INFO)
+
+
+def get_summary_dir(job_dir):
+    n = 0
+    while 1:
+        summary_dir = job_dir+'/train_'+str(n)
+        if not file_io.is_directory(summary_dir):
+            return summary_dir
+        n += 1
 
 
 def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_rate):
@@ -26,6 +35,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             # hook that performs evaluation separate from training
             hooks.append(EvaluationRunHook(job_dir, metric_dict, evaluation_graph))
         hooks.append(CheckpointExporterHook(job_dir))
+
     # Create a new graph and specify that as default
     with tf.Graph().as_default():
         with tf.device(tf.train.replica_device_setter()):
@@ -34,9 +44,14 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
             image, ground_truth, name = model.input_fn(file_dir, num_epochs, shuffle=True, shared_name='train_queue')
 
             # Returns the training graph and global step tensor
-            train_op, log_hook = model.model_fn(model.TRAIN, name, image, ground_truth, num_channels, learning_rate)
+            train_op, log_hook, train_summaries = model.model_fn(model.TRAIN, name, image, ground_truth,
+                                                                 num_channels, learning_rate)
             # Hook that logs training to the console
             hooks.append(log_hook)
+
+            train_summary_hook = tf.train.SummarySaverHook(save_steps=1, output_dir=get_summary_dir(job_dir),
+                                                           summary_op=train_summaries)
+            hooks.append(train_summary_hook)
 
         # Creates a MonitoredSession for training
         # MonitoredSession is a Session-like object that handles

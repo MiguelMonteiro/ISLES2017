@@ -87,7 +87,7 @@ gsutil cp $OUTPUT_PATH/* DataFiles/raw_training_predictions/
 To get the predictions for the test set run the commands above but change the input path to:
 ````
 INPUT_PATHS=gs://$BUCKET_NAME/data/testing_tfrecords/*
-```
+````
 
 Copy the output to your machine:
 ````

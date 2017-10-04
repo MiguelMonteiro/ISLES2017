@@ -19,7 +19,7 @@ def get_summary_dir(job_dir):
         n += 1
 
 
-def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_rate):
+def run(target, is_chief, train_steps, job_dir, train_files, eval_files, num_epochs, learning_rate):
     num_channels = 6
     hooks = list()
     # does not work well in distributed mode cause it only counts local steps (I think...)
@@ -29,7 +29,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
         evaluation_graph = tf.Graph()
         with evaluation_graph.as_default():
             # Features and label tensors
-            image, ground_truth, name = model.input_fn(file_dir, 1, shuffle=False, shared_name=None)
+            image, ground_truth, name = model.input_fn(eval_files, 1, shuffle=False, shared_name=None)
             # Returns dictionary of tensors to be evaluated
             metric_dict = model.model_fn(model.EVAL, name, image, ground_truth, num_channels, learning_rate)
             # hook that performs evaluation separate from training
@@ -41,7 +41,7 @@ def run(target, is_chief, train_steps, job_dir, file_dir, num_epochs, learning_r
         with tf.device(tf.train.replica_device_setter()):
 
             # Features and label tensors as read using filename queue
-            image, ground_truth, name = model.input_fn(file_dir, num_epochs, shuffle=True, shared_name='train_queue')
+            image, ground_truth, name = model.input_fn(train_files, num_epochs, shuffle=True, shared_name='train_queue')
 
             # Returns the training graph and global step tensor
             train_op, log_hook, train_summaries = model.model_fn(model.TRAIN, name, image, ground_truth,
@@ -114,18 +114,22 @@ def dispatch(*args, **kwargs):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--file-dir',
+    parser.add_argument('--train-files',
                         required=True,
                         type=str,
-                        help='Input files local or GCS',
+                        help='training input files or directory local or GCS',
+                        nargs='+')
+    parser.add_argument('--eval-files',
+                        required=True,
+                        type=str,
+                        help='Eval input files or directory local or GCS',
                         nargs='+')
     parser.add_argument('--job-dir',
                         required=True,
                         type=str,
-                        help="""\
-                      GCS or local dir for checkpoints, exports, and
-                      summaries. Use an existing directory to load a
-                      trained model, or a new directory to retrain""")
+                        help='GCS or local dir for checkpoints, exports, and '
+                             'summaries. Use an existing directory to load a '
+                             'trained model, or a new directory to retrain')
     parser.add_argument('--train-steps',
                         type=int,
                         help='Maximum number of training steps to perform.')

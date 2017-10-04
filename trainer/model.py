@@ -117,9 +117,13 @@ def parse_example(serialized_example):
     return image, ground_truth, example_name
 
 
-def input_fn(file_dir, num_epochs=None, shuffle=False, shared_name=None):
-    # get file names from given directory
-    file_names = file_io.get_matching_files(file_dir[0] + '/*tfrecord')
+def input_fn(files, num_epochs=None, shuffle=False, shared_name=None):
+
+    # get file names
+    if file_io.is_directory(files[0]):
+        file_names = file_io.get_matching_files(files[0] + '/*tfrecord')
+    else:
+        file_names = files
 
     # shuffle if required
     if shuffle:

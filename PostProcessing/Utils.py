@@ -6,14 +6,16 @@ import pydensecrf.densecrf as dcrf
 from pydensecrf.utils import create_pairwise_gaussian, create_pairwise_bilateral, unary_from_softmax
 import nibabel as nib
 from trainer.volume_metrics import dc, hd, assd
+from scipy import ndimage
 
 
 class CRF(object):
-    def __init__(self, sdims, schan=None):
+    def __init__(self, sdims, schan=None, iter=5):
         self.sdims = sdims
         self.schan = schan
+        self.iter = iter
 
-    def adjust_prediction(self, probability, image, iter=2):
+    def adjust_prediction(self, probability, image):
         crf = dcrf.DenseCRF(np.prod(probability.shape), 2)
         # crf = dcrf.DenseCRF(np.prod(probability.shape), 1)
 
@@ -33,20 +35,53 @@ class CRF(object):
             appearance = create_pairwise_bilateral(sdims=sdims, schan=schan, img=image, chdim=3)
             crf.addPairwiseEnergy(appearance, compat=2)
 
-        result = crf.inference(iter)
+        result = crf.inference(self.iter)
         crf_prediction = np.argmax(result, axis=0).reshape(probability.shape).astype(np.float32)
 
         return crf_prediction
 
+    def transform_image(self, prediction, probability, image):
+        return self.adjust_prediction(probability, image)
 
-def export_data(prediction_dir, nii_image_dir, tfrecords_dir, export_dir, crf=None):
+
+class MorphologicalFilter(object):
+    def __init__(self, threshold=.5):
+        # percentage of biggest volume below which volumes are ereased
+        self.threshold = threshold
+
+    def adjust_prediction(self, prediction):
+
+        new_prediction = prediction
+
+        labeled, n_objects = ndimage.label(prediction > 0)
+
+        max_volume = 0
+
+        volumes = {}
+
+        for object_n in range(1, n_objects + 1):
+            volume = np.sum(prediction[labeled == object_n])
+            if volume > max_volume:
+                max_volume = volume
+            volumes.update({object_n: volume})
+
+        for object_n, volume in volumes.iteritems():
+            if volume < self.threshold * max_volume:
+                new_prediction[labeled == object_n] = 0
+        return new_prediction
+
+    def transform_image(self, prediction, probability, image):
+        return self.adjust_prediction(prediction)
+
+
+def export_data(prediction_dir, nii_image_dir, tfrecords_dir, export_dir, transformation=None):
 
     for file_path in os.listdir(prediction_dir):
         name, prediction, probability = read_prediction_file(os.path.join(prediction_dir, file_path))
 
-        if crf:
+        if transformation:
             image, ground_truth = get_original_image(os.path.join(tfrecords_dir, name + '.tfrecord'), False)
-            prediction = crf.adjust_prediction(probability, image, iter=5)
+            prediction = transformation.transform_image(prediction, probability, image)
 
         # build a .nii image
         img = nib.Nifti1Image(prediction, np.eye(4))
@@ -113,7 +148,7 @@ def adjust_training_data(transform, report=True):
         metrics['hd']['pre_transform'].append(hd(prediction, ground_truth))
         metrics['assd']['pre_transform'].append(assd(prediction, ground_truth))
 
-        new_prediction = transform(prediction, probability, image)
+        new_prediction = transform.transform_image(prediction, probability, image)
 
         metrics['dc']['post_transform'].append(dc(new_prediction, ground_truth))
         metrics['hd']['post_transform'].append(hd(new_prediction, ground_truth))
@@ -127,4 +162,7 @@ def adjust_training_data(transform, report=True):
             report_transform_impact(metric['pre_transform'], metric['post_transform'])
 
     return metrics
+
+
+
 

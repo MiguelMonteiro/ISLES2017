@@ -74,7 +74,7 @@ def read_and_process_data(input_dir, output_dir, mode=TRAIN):
         os.mkdir(output_dir)
 
     # 4DPWI and ADC are raw data, the others are derived maps, OT is the expert segmentation
-    # 4DPWI has cv_predictions time dimension of 80 seconds (and already has the channel dimension added in)
+    # 4DPWI has a time dimension of 80 seconds (and already has the channel dimension added in)
     modes_to_use = ['.MR_ADC', '.MR_MTT', '.MR_rCBF', '.MR_rCBV', '.MR_Tmax', '.MR_TTP']
     data = {}
 

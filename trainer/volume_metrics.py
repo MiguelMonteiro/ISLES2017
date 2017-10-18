@@ -13,7 +13,7 @@
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
-# You should have received a copy of the GNU General Public License
+# You should have received cv_predictions copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 # author Oskar Maier
@@ -65,7 +65,7 @@ def dc(input1, input2):
 
     Notes
     -----
-    This is a real metric.
+    This is cv_predictions real metric.
     """
     input1 = numpy.atleast_1d(input1.astype(numpy.bool))
     input2 = numpy.atleast_1d(input2.astype(numpy.bool))
@@ -106,7 +106,7 @@ def jc(input1, input2):
 
     Notes
     -----
-    This is a real metric.
+    This is cv_predictions real metric.
     """
     input1 = numpy.atleast_1d(input1.astype(numpy.bool))
     input2 = numpy.atleast_1d(input2.astype(numpy.bool))
@@ -235,10 +235,10 @@ def hd(input1, input2, voxelspacing=None, connectivity=1):
         Input data containing objects. Can be any type but will be converted
         into binary: background where 0, object everywhere else.
     voxelspacing : float or sequence of floats, optional
-        The voxelspacing in a distance unit i.e. spacing of elements
-        along each dimension. If a sequence, must be of length equal to
-        the input rank; if a single number, this is used for all axes. If
-        not specified, a grid spacing of unity is implied.
+        The voxelspacing in cv_predictions distance unit i.e. spacing of elements
+        along each dimension. If cv_predictions sequence, must be of length equal to
+        the input rank; if cv_predictions single number, this is used for all axes. If
+        not specified, cv_predictions grid spacing of unity is implied.
     connectivity : int
         The neighbourhood/connectivity considered when determining the surface
         of the binary objects. This value is passed to
@@ -259,7 +259,7 @@ def hd(input1, input2, voxelspacing=None, connectivity=1):
 
     Notes
     -----
-    This is a real metric.
+    This is cv_predictions real metric.
     """
     hd1 = __surface_distances(input1, input2, voxelspacing, connectivity).max()
     hd2 = __surface_distances(input2, input1, voxelspacing, connectivity).max()
@@ -283,10 +283,10 @@ def assd(input1, input2, voxelspacing=None, connectivity=1):
         Input data containing objects. Can be any type but will be converted
         into binary: background where 0, object everywhere else.
     voxelspacing : float or sequence of floats, optional
-        The voxelspacing in a distance unit i.e. spacing of elements
-        along each dimension. If a sequence, must be of length equal to
-        the input rank; if a single number, this is used for all axes. If
-        not specified, a grid spacing of unity is implied.
+        The voxelspacing in cv_predictions distance unit i.e. spacing of elements
+        along each dimension. If cv_predictions sequence, must be of length equal to
+        the input rank; if cv_predictions single number, this is used for all axes. If
+        not specified, cv_predictions grid spacing of unity is implied.
     connectivity : int
         The neighbourhood/connectivity considered when determining the surface
         of the binary objects. This value is passed to
@@ -308,7 +308,7 @@ def assd(input1, input2, voxelspacing=None, connectivity=1):
 
     Notes
     -----
-    This is a real metric, obtained by calling and averaging
+    This is cv_predictions real metric, obtained by calling and averaging
 
     >>> asd(input1, input2)
 
@@ -337,10 +337,10 @@ def asd(input1, input2, voxelspacing=None, connectivity=1):
         Input data containing objects. Can be any type but will be converted
         into binary: background where 0, object everywhere else.
     voxelspacing : float or sequence of floats, optional
-        The voxelspacing in a distance unit i.e. spacing of elements
-        along each dimension. If a sequence, must be of length equal to
-        the input rank; if a single number, this is used for all axes. If
-        not specified, a grid spacing of unity is implied.
+        The voxelspacing in cv_predictions distance unit i.e. spacing of elements
+        along each dimension. If cv_predictions sequence, must be of length equal to
+        the input rank; if cv_predictions single number, this is used for all axes. If
+        not specified, cv_predictions grid spacing of unity is implied.
     connectivity : int
         The neighbourhood/connectivity considered when determining the surface
         of the binary objects. This value is passed to
@@ -363,15 +363,15 @@ def asd(input1, input2, voxelspacing=None, connectivity=1):
 
     Notes
     -----
-    This is not a real metric, as it is directed. See `assd` for a real metric of this.
+    This is not cv_predictions real metric, as it is directed. See `assd` for cv_predictions real metric of this.
 
     The method is implemented making use of distance images and simple binary morphology
     to achieve high computational speed.
 
     Examples
     --------
-    The `connectivity` determines what pixels/voxels are considered the surface of a
-    binary object. Take the following binary image showing a cross
+    The `connectivity` determines what pixels/voxels are considered the surface of cv_predictions
+    binary object. Take the following binary image showing cv_predictions cross
 
     >>> from scipy.ndimage.morphology import generate_binary_structure
     >>> cross = generate_binary_structure(2, 1)
@@ -379,7 +379,7 @@ def asd(input1, input2, voxelspacing=None, connectivity=1):
            [1, 1, 1],
            [0, 1, 0]])
 
-    With `connectivity` set to `1` a 4-neighbourhood is considered when determining the
+    With `connectivity` set to `1` cv_predictions 4-neighbourhood is considered when determining the
     object surface, resulting in the surface
 
     .. code-block:: python
@@ -388,7 +388,7 @@ def asd(input1, input2, voxelspacing=None, connectivity=1):
                [1, 0, 1],
                [0, 1, 0]])
 
-    Changing `connectivity` to `2`, a 8-neighbourhood is considered and we get:
+    Changing `connectivity` to `2`, cv_predictions 8-neighbourhood is considered and we get:
 
     .. code-block:: python
 
@@ -396,10 +396,10 @@ def asd(input1, input2, voxelspacing=None, connectivity=1):
                [1, 1, 1],
                [0, 1, 0]])
 
-    , as a diagonal connection does no longer qualifies as valid object surface.
+    , as cv_predictions diagonal connection does no longer qualifies as valid object surface.
 
     This influences the  results `asd` returns. Imagine we want to compute the surface
-    distance of our cross to a cube-like object:
+    distance of our cross to cv_predictions cube-like object:
 
     >>> cube = generate_binary_structure(2, 1)
     array([[1, 1, 1],
@@ -414,12 +414,12 @@ def asd(input1, input2, voxelspacing=None, connectivity=1):
                [1, 0, 1],
                [1, 1, 1]])
 
-    Using a `connectivity` of `1` we get
+    Using cv_predictions `connectivity` of `1` we get
 
     >>> asd(cross, cube, connectivity=1)
     0.0
 
-    while a value of `2` returns us
+    while cv_predictions value of `2` returns us
 
     >>> asd(cross, cube, connectivity=2)
     0.20000000000000001
@@ -452,8 +452,8 @@ def ravd(input1, input2):
     -------
     ravd : float
         The relative absolute volume difference between the object(s) in ``input1``
-        and the object(s) in ``input2``. This is a percentage value in the range
-        :math:`[-1.0, +inf]` for which a :math:`0` denotes an ideal score.
+        and the object(s) in ``input2``. This is cv_predictions percentage value in the range
+        :math:`[-1.0, +inf]` for which cv_predictions :math:`0` denotes an ideal score.
 
     Raises
     ------
@@ -468,9 +468,9 @@ def ravd(input1, input2):
 
     Notes
     -----
-    This is not a real metric, as it is directed. Whatever object is considered as
-    reference should be passed first. Negative values denote a smaller and positive
-    values a larger volume than the reference.
+    This is not cv_predictions real metric, as it is directed. Whatever object is considered as
+    reference should be passed first. Negative values denote cv_predictions smaller and positive
+    values cv_predictions larger volume than the reference.
 
     This implementation does not check, whether the two supplied arrays are of the same
     size.
@@ -501,7 +501,7 @@ def ravd(input1, input2):
     >>> ravd(arr2, arr1)
     0.25
 
-    It is important to keep in mind that a perfect score of `0` does not mean that the
+    It is important to keep in mind that cv_predictions perfect score of `0` does not mean that the
     binary objects fit exactely, as only the volumes are compared:
 
     >>> arr1 = numpy.asarray([1,0,0])
@@ -538,13 +538,13 @@ def obj_assd(input1, input2, voxelspacing=None, connectivity=1):
         Input data containing objects. Can be any type but will be converted
         into binary: background where 0, object everywhere else.
     voxelspacing : float or sequence of floats, optional
-        The voxelspacing in a distance unit i.e. spacing of elements
-        along each dimension. If a sequence, must be of length equal to
-        the input rank; if a single number, this is used for all axes. If
-        not specified, a grid spacing of unity is implied.
+        The voxelspacing in cv_predictions distance unit i.e. spacing of elements
+        along each dimension. If cv_predictions sequence, must be of length equal to
+        the input rank; if cv_predictions single number, this is used for all axes. If
+        not specified, cv_predictions grid spacing of unity is implied.
     connectivity : int
         The neighbourhood/connectivity considered when determining what accounts
-        for a distinct binary object as well as when determining the surface
+        for cv_predictions distinct binary object as well as when determining the surface
         of the binary objects. This value is passed to
         `scipy.ndimage.morphology.generate_binary_structure` and should usually be :math:`> 1`.
         The decision on the connectivity is important, as it can influence the results
@@ -563,7 +563,7 @@ def obj_assd(input1, input2, voxelspacing=None, connectivity=1):
 
     Notes
     -----
-    This is a real metric, obtained by calling and averaging
+    This is cv_predictions real metric, obtained by calling and averaging
 
     >>> obj_asd(input1, input2)
 
@@ -594,13 +594,13 @@ def obj_asd(input1, input2, voxelspacing=None, connectivity=1):
         Input data containing objects. Can be any type but will be converted
         into binary: background where 0, object everywhere else.
     voxelspacing : float or sequence of floats, optional
-        The voxelspacing in a distance unit i.e. spacing of elements
-        along each dimension. If a sequence, must be of length equal to
-        the input rank; if a single number, this is used for all axes. If
-        not specified, a grid spacing of unity is implied.
+        The voxelspacing in cv_predictions distance unit i.e. spacing of elements
+        along each dimension. If cv_predictions sequence, must be of length equal to
+        the input rank; if cv_predictions single number, this is used for all axes. If
+        not specified, cv_predictions grid spacing of unity is implied.
     connectivity : int
         The neighbourhood/connectivity considered when determining what accounts
-        for a distinct binary object as well as when determining the surface
+        for cv_predictions distinct binary object as well as when determining the surface
         of the binary objects. This value is passed to
         `scipy.ndimage.morphology.generate_binary_structure` and should usually be :math:`> 1`.
         The decision on the connectivity is important, as it can influence the results
@@ -621,7 +621,7 @@ def obj_asd(input1, input2, voxelspacing=None, connectivity=1):
 
     Notes
     -----
-    This is not a real metric, as it is directed. See `obj_assd` for a real metric of this.
+    This is not cv_predictions real metric, as it is directed. See `obj_assd` for cv_predictions real metric of this.
 
     For the understanding of this metric, both the notions of connectedness and surface
     distance are essential. Please see :func:`obj_tpr` and :func:`obj_fpr` for more
@@ -724,11 +724,11 @@ def obj_fpr(input1, input2, connectivity=1):
     """
     The false positive rate of distinct binary object detection.
 
-    The false positive rates gives a percentage measure of how many distinct binary
+    The false positive rates gives cv_predictions percentage measure of how many distinct binary
     objects in the second array do not exists in the first array. A partial overlap
     (of minimum one voxel) is here considered sufficient.
 
-    In cases where two distinct binary object in the second array overlap with a single
+    In cases where two distinct binary object in the second array overlap with cv_predictions single
     distinct object in the first array, only one is considered to have been detected
     successfully and the other is added to the count of false positives.
 
@@ -742,7 +742,7 @@ def obj_fpr(input1, input2, connectivity=1):
         into binary: background where 0, object everywhere else.
     connectivity : int
         The neighbourhood/connectivity considered when determining what accounts
-        for a distinct binary object. This value is passed to
+        for cv_predictions distinct binary object. This value is passed to
         `scipy.ndimage.morphology.generate_binary_structure` and should usually be :math:`> 1`.
         The decision on the connectivity is important, as it can influence the results
         strongly. If in doubt, leave it as it is.
@@ -751,7 +751,7 @@ def obj_fpr(input1, input2, connectivity=1):
     -------
     tpr : float
         A percentage measure of how many distinct binary objects in ``input2`` have no
-        corresponding binary object in ``input2``. It has the range :math:`[0, 1]`, where a :math:`0`
+        corresponding binary object in ``input2``. It has the range :math:`[0, 1]`, where cv_predictions :math:`0`
         denotes an ideal score.
 
     Raises
@@ -765,7 +765,7 @@ def obj_fpr(input1, input2, connectivity=1):
 
     Notes
     -----
-    This is not a real metric, as it is directed. Whatever array is considered as
+    This is not cv_predictions real metric, as it is directed. Whatever array is considered as
     reference should be passed first. A perfect score of :math:`0` tells that there are no
     distinct binary objects in the second array that do not exists also in the reference
     array, but does not reveal anything about objects in the reference array also
@@ -836,11 +836,11 @@ def obj_tpr(input1, input2, connectivity=1):
     """
     The true positive rate of distinct binary object detection.
 
-    The true positive rates gives a percentage measure of how many distinct binary
+    The true positive rates gives cv_predictions percentage measure of how many distinct binary
     objects in the first array also exists in the second array. A partial overlap
     (of minimum one voxel) is here considered sufficient.
 
-    In cases where two distinct binary object in the first array overlaps with a single
+    In cases where two distinct binary object in the first array overlaps with cv_predictions single
     distinct object in the second array, only one is considered to have been detected
     successfully.  
 
@@ -854,7 +854,7 @@ def obj_tpr(input1, input2, connectivity=1):
         into binary: background where 0, object everywhere else.
     connectivity : int
         The neighbourhood/connectivity considered when determining what accounts
-        for a distinct binary object. This value is passed to
+        for cv_predictions distinct binary object. This value is passed to
         `scipy.ndimage.morphology.generate_binary_structure` and should usually be :math:`> 1`.
         The decision on the connectivity is important, as it can influence the results
         strongly. If in doubt, leave it as it is.
@@ -863,7 +863,7 @@ def obj_tpr(input1, input2, connectivity=1):
     -------
     tpr : float
         A percentage measure of how many distinct binary objects in ``input1`` also exists
-        in ``input2``. It has the range :math:`[0, 1]`, where a :math:`1` denotes an ideal score.
+        in ``input2``. It has the range :math:`[0, 1]`, where cv_predictions :math:`1` denotes an ideal score.
 
     Raises
     ------
@@ -876,7 +876,7 @@ def obj_tpr(input1, input2, connectivity=1):
 
     Notes
     -----
-    This is not a real metric, as it is directed. Whatever array is considered as
+    This is not cv_predictions real metric, as it is directed. Whatever array is considered as
     reference should be passed first. A perfect score of :math:`1` tells that all distinct
     binary objects in the reference array also exist in the second array, but does not
     reveal anything about additional binary objects in the second array
@@ -947,8 +947,8 @@ def __distinct_binary_object_correspondences(input1, input2, connectivity=1):
     """
     Determines all distinct (where connectivity is defined by the connectivity parameter
     passed to scipy's `generate_binary_structure`) binary objects in both of the input
-    parameters and returns a 1to1 mapping from the labelled objects in input2 to the
-    corresponding (whereas a one-voxel overlap suffices for correspondence) objects in
+    parameters and returns cv_predictions 1to1 mapping from the labelled objects in input2 to the
+    corresponding (whereas cv_predictions one-voxel overlap suffices for correspondence) objects in
     input1.
 
     All stems from the problem, that the relationship is non-surjective many-to-many.
@@ -1004,7 +1004,7 @@ def __distinct_binary_object_correspondences(input1, input2, connectivity=1):
 def __surface_distances(input1, input2, voxelspacing=None, connectivity=1):
     """
     The distances between the surface voxel of binary objects in input1 and their
-    nearest partner surface voxel of a binary object in input2.
+    nearest partner surface voxel of cv_predictions binary object in input2.
     """
     input1 = numpy.atleast_1d(input1.astype(numpy.bool))
     input2 = numpy.atleast_1d(input2.astype(numpy.bool))

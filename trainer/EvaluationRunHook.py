@@ -71,7 +71,7 @@ class EvaluationRunHook(tf.train.SessionRunHook):
             # variables to and from checkpoint
             self._saver = tf.train.Saver()
 
-            # Creates a global step to contain a counter for
+            # Creates cv_predictions global step to contain cv_predictions counter for
             # the global training step
             self._gs = tf.train.get_or_create_global_step()
 
@@ -85,7 +85,7 @@ class EvaluationRunHook(tf.train.SessionRunHook):
         self.logger = Logger(os.path.join(checkpoint_dir, 'eval'))
 
     def after_run(self, run_context, run_values):
-        # Always check for new checkpoints in case a single evaluation
+        # Always check for new checkpoints in case cv_predictions single evaluation
         # takes longer than checkpoint frequency and _eval_every is >1
         self._update_latest_checkpoint()
 

@@ -83,7 +83,7 @@ def export_data(prediction_dir, nii_image_dir, tfrecords_dir, export_dir, transf
             image, ground_truth = get_original_image(os.path.join(tfrecords_dir, name + '.tfrecord'), False)
             prediction = transformation.transform_image(prediction, probability, image)
 
-        # build a .nii image
+        # build cv_predictions .nii image
         img = nib.Nifti1Image(prediction, np.eye(4))
         img.set_data_dtype(dtype=np.uint8)
 
@@ -134,9 +134,8 @@ def report_transform_impact(pre_transform, post_transform):
     return
 
 
-def adjust_training_data(transform, report=True):
-    prediction_dir = 'DataFiles/raw_training_predictions'
-    image_dir = 'DataFiles/training_tfrecords'
+def adjust_training_data(transform, prediction_dir, image_dir, report=True):
+
     metrics = {outer_key: {inner_key: [] for inner_key in ['pre_transform', 'post_transform']}
                for outer_key in ['dc', 'hd', 'assd']}
 

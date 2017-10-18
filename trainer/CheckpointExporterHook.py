@@ -29,7 +29,7 @@ class CheckpointExporterHook(tf.train.SessionRunHook):
         self._checkpoint_lock = threading.Lock()
 
     def after_run(self, run_context, run_values):
-        # Always check for new checkpoints in case a single evaluation
+        # Always check for new checkpoints in case cv_predictions single evaluation
         # takes longer than checkpoint frequency and _eval_every is >1
         self._update_latest_checkpoint()
 

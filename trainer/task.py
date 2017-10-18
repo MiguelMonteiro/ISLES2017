@@ -36,7 +36,7 @@ def run(target, is_chief, train_steps, job_dir, train_files, eval_files, num_epo
             hooks.append(EvaluationRunHook(job_dir, metric_dict, evaluation_graph))
         hooks.append(CheckpointExporterHook(job_dir))
 
-    # Create a new graph and specify that as default
+    # Create cv_predictions new graph and specify that as default
     with tf.Graph().as_default():
         with tf.device(tf.train.replica_device_setter()):
 
@@ -53,8 +53,8 @@ def run(target, is_chief, train_steps, job_dir, train_files, eval_files, num_epo
                                                            summary_op=train_summaries)
             hooks.append(train_summary_hook)
 
-        # Creates a MonitoredSession for training
-        # MonitoredSession is a Session-like object that handles
+        # Creates cv_predictions MonitoredSession for training
+        # MonitoredSession is cv_predictions Session-like object that handles
         # initialization, recovery and hooks
         # https://www.tensorflow.org/api_docs/python/tf/train/MonitoredTrainingSession
         with tf.train.MonitoredTrainingSession(master=target,
@@ -75,7 +75,7 @@ def dispatch(*args, **kwargs):
     """Parse TF_CONFIG to cluster_spec and call run() method
   TF_CONFIG environment variable is available when running using
   gcloud either locally or on cloud. It has all the information required
-  to create a ClusterSpec which is important for running distributed code.
+  to create cv_predictions ClusterSpec which is important for running distributed code.
   """
 
     tf_config = os.environ.get('TF_CONFIG')
@@ -103,7 +103,7 @@ def dispatch(*args, **kwargs):
     # Worker ships the graph to the ps server
     # The ps server manages the parameters of the model.
     #
-    # See a detailed video on distributed TensorFlow
+    # See cv_predictions detailed video on distributed TensorFlow
     # https://www.youtube.com/watch?v=la_M6bCV91M
     if job_name == 'ps':
         server.join()
@@ -128,8 +128,8 @@ if __name__ == "__main__":
                         required=True,
                         type=str,
                         help='GCS or local dir for checkpoints, exports, and '
-                             'summaries. Use an existing directory to load a '
-                             'trained model, or a new directory to retrain')
+                             'summaries. Use an existing directory to load cv_predictions '
+                             'trained model, or cv_predictions new directory to retrain')
     parser.add_argument('--train-steps',
                         type=int,
                         help='Maximum number of training steps to perform.')

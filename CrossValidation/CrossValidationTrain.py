@@ -40,20 +40,6 @@ for train_indices, valid_indices in data_generator.split(file_paths):
               '--num-epochs 30 ' \
               '--verbosity DEBUG'.format(job_name, job_dir, region, train_file_paths, eval_file_paths)
 
-    # command = 'gcloud ml-engine jobs submit training {0} ' \
-    #           '--job-dir {1} ' \
-    #           '--runtime-version 1.2 ' \
-    #           '--module-name trainer.task ' \
-    #           '--package-path trainer/ ' \
-    #           '--region {2} ' \
-    #           '-- ' \
-    #           '--train-files {3} ' \
-    #           '--eval-files {4} ' \
-    #           '--learning-rate .01 ' \
-    #           '--train-steps 1 ' \
-    #           '--num-epochs 1 ' \
-    #           '--verbosity DEBUG'.format(job_name, job_dir, region, train_file_paths, eval_file_paths)
-
     print command
     output = subprocess.call(command, shell=True)
     time.sleep(3600 * 2)

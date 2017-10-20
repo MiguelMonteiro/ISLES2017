@@ -138,10 +138,13 @@ def adjust_training_data(transform, prediction_dir, image_dir, report=True):
 
     metrics = {outer_key: {inner_key: [] for inner_key in ['pre_transform', 'post_transform']}
                for outer_key in ['dc', 'hd', 'assd']}
+    metrics['names'] = []
 
     for file_path in os.listdir(prediction_dir):
         name, prediction, probability = read_prediction_file(os.path.join(prediction_dir, file_path))
         image, ground_truth = get_original_image(os.path.join(image_dir, name+'.tfrecord'), True)
+
+        metrics['names'].append(name)
 
         metrics['dc']['pre_transform'].append(dc(prediction, ground_truth))
         metrics['hd']['pre_transform'].append(hd(prediction, ground_truth))

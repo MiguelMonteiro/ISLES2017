@@ -53,7 +53,7 @@ def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learni
 
     # loss function
     with tf.variable_scope('loss_function'):
-        loss = mixed_loss(logits, tf_ground_truth)
+        loss = soft_dice_loss(logits, tf_ground_truth)
 
     # global step
     global_step = tf.train.get_or_create_global_step()

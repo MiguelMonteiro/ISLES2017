@@ -3,9 +3,9 @@ import subprocess
 import os
 import numpy as np
 import time
-
+os.chdir('../')
 data_generator = KFold(n_splits=5, shuffle=True, random_state=13)
-base_job_name = 'isles_cv_1'
+base_job_name = 'isles_cv_soft_dice_loss'
 bucket_name = 'gs://coral-weaver-4010'
 data_dir = os.path.join(bucket_name, 'data/isles_tfrecords')
 region = 'us-east1'
@@ -42,4 +42,4 @@ for train_indices, valid_indices in data_generator.split(file_paths):
 
     print command
     output = subprocess.call(command, shell=True)
-    time.sleep(3600 * 2)
+    time.sleep(3600 * 1.5)

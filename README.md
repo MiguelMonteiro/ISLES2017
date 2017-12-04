@@ -1,7 +1,7 @@
 Get the challenge data and run the DataLoader, transfer the files into a google cloud bucket.
-My bucket name is ``coral-weaver-4010``, yours will be different.
+
 ````
-BUCKET_NAME=coral-weaver-4010
+BUCKET_NAME=your-bucket-name
 ````
 To train locally but using google cloud (just to test, you must have the files locally):
 ```
@@ -24,7 +24,6 @@ gcloud ml-engine local train \
 To train on google cloud using GPUs (costs money, takes time):
 ````
 JOB_NAME=isles_train_job
-BUCKET_NAME=coral-weaver-4010
 OUTPUT_PATH=gs://$BUCKET_NAME/$JOB_NAME
 DATA_PATH=gs://$BUCKET_NAME/data/isles_tfrecords
 REGION=us-east1
@@ -62,7 +61,6 @@ gcloud ml-engine versions create v7 --model isles_2017 --origin $MODEL_BINARIES 
 To get predictions for the training set:
 ````
 DATA_FORMAT=TF_RECORD
-BUCKET_NAME=coral-weaver-4010
 INPUT_PATHS=gs://$BUCKET_NAME/data/isles_tfrecords/*
 MODEL_NAME=isles_2017
 REGION=us-east1

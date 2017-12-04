@@ -3,6 +3,7 @@ import nibabel as nib
 import os
 from collections import Counter
 
+
 def get_sub_folders(folder):
     return [sub_folder for sub_folder in os.listdir(folder) if os.path.isdir(os.path.join(folder, sub_folder))]
 

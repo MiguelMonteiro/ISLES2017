@@ -53,7 +53,7 @@ def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learni
 
     # loss function
     with tf.variable_scope('loss_function'):
-        loss = soft_dice_loss(logits, tf_ground_truth)
+        loss = mixed_loss(logits, tf_ground_truth)
 
     # global step
     global_step = tf.train.get_or_create_global_step()
@@ -65,7 +65,7 @@ def model_fn(mode, name, tf_input_data, tf_ground_truth, n_channels, init_learni
         # Optimizer.
         with tf.variable_scope('optimizer'):
             learning_rate = tf.train.exponential_decay(init_learning_rate, global_step, 200, 0.95)
-            train_op = tf.train.AdagradOptimizer(learning_rate).minimize(loss, global_step=global_step)
+            train_op = tf.train.AdamOptimizer(learning_rate).minimize(loss, global_step=global_step)
 
         # hook than logs training info to the console
         def formatter(d):

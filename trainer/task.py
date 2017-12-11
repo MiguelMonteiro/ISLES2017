@@ -19,7 +19,7 @@ def get_summary_dir(job_dir):
         n += 1
 
 
-def run(target, is_chief, train_steps, job_dir, train_files, eval_files, num_epochs, learning_rate):
+def run(cluster_spec, target, is_chief, train_steps, job_dir, train_files, eval_files, num_epochs, learning_rate):
     num_channels = 6
     hooks = list()
     # does not work well in distributed mode cause it only counts local steps (I think...)
@@ -38,7 +38,7 @@ def run(target, is_chief, train_steps, job_dir, train_files, eval_files, num_epo
 
     # Create a new graph and specify that as default
     with tf.Graph().as_default():
-        with tf.device(tf.train.replica_device_setter()):
+        with tf.device(tf.train.replica_device_setter(cluster=cluster_spec)):
 
             # Features and label tensors as read using filename queue
             image, ground_truth, name = model.input_fn(train_files, num_epochs, shuffle=True, shared_name='train_queue')

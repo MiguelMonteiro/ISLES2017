@@ -101,6 +101,25 @@ def export_data(prediction_dir, nii_image_dir, tfrecords_dir, export_dir, transf
         nib.save(export_image, os.path.join(export_path))
 
 
+def export_data_prob(prediction_dir, nii_image_dir, export_dir):
+
+    for file_path in os.listdir(prediction_dir):
+        name, _, probability = read_prediction_file(os.path.join(prediction_dir, file_path))
+
+        path = os.path.join(nii_image_dir, name)
+        adc_name = next(l for l in os.listdir(path) if 'MR_ADC' in l)
+        original = nib.load(os.path.join(nii_image_dir, name, adc_name, adc_name + '.nii'))
+        original.set_data_dtype(16)
+
+        # build cv_predictions .nii image
+        img = nib.Nifti1Image(probability, original.affine, header=original.header)
+
+        # set name to specification and export
+        _id = next(l for l in os.listdir(path) if 'MR_MTT' in l).split('.')[-1]
+        export_path = os.path.join(export_dir, 'SMIR.' + name + '.' + _id + '.nii')
+        nib.save(img, os.path.join(export_path))
+
+
 def read_prediction_file(file_path):
     with open(file_path) as json_data:
         d = json.load(json_data)
